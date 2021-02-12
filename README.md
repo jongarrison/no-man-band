@@ -1,12 +1,12 @@
-A simple project to play around with midi and generative music.  The recent inspiration is was a vague idea that it would be fun to have an OpenSCAD for music. Let's code in that direction.
+A simple project to play around with midi and generative music.  The recent inspiration is a vague idea that it would be fun to have an OpenSCAD for music. Let's code in that direction.
 
-The project runs as an interactive repl
+The project runs as an interactive repl. You can see all of the commands by entering "global"
 
-#Setup
+# Setup
 
 npm install
 
-#Running:
+# Running:
 
 You'll need something that receives midi commands and plays sounds.  [Plogue's Sforzand](https://www.plogue.com/products/sforzando.html) est magnifique.
 
@@ -32,7 +32,7 @@ node noManBand.js
 
 
 
-#Inspiration
+# Inspiration
 
 * [scribbletune](https://www.npmjs.com/package/scribbletune)
 * [woolf-waves](https://github.com/radiodario/woolf-waves)
