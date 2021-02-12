@@ -4,34 +4,30 @@ The project runs as an interactive repl. You can see all of the commands by ente
 
 # Setup
 
-npm install
+\$ npm install
 
 # Running:
 
 You'll need something that receives midi commands and plays sounds.  [Plogue's Sforzand](https://www.plogue.com/products/sforzando.html) est magnifique.
 
-node noManBand.js
+*from the commandline:*
 
-*in the repl*
+\$ node noManBand.js
 
-> listOutputPorts()
+*now in the no-man-band repl:*
+
+\$ listOutputPorts()
 
     Port: 0 name: IAC Driver Bus 1
     Port: 1 name: sforzando
     Port: 2 name: Bidule  1
-    Port: 3 name: Bidule  2
-    Port: 4 name: Bidule  3
-    Port: 5 name: Bidule  4
 
-> connect(1)
+\$ connect(1)
 
     opened output port 1 name=sforzando
 
-> start()
-
-
-
-
+\$ start()
+ 
 # Inspiration
 
 * [scribbletune](https://www.npmjs.com/package/scribbletune)

@@ -16,7 +16,7 @@ const { conforms } = require("lodash");
 
   console.log("About to start REPL");
   const replServer = repl.start({
-    prompt: "noManBand> ",
+    prompt: "noManBand$ ",
     breakEvalOnSigint: false, //Can't be true if "eval" is overriden
     useGlobal: false, //Can't be true if "eval" is overriden
     terminal: true,
