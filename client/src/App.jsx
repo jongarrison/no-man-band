@@ -105,6 +105,7 @@ export default function App() {
             t.conf.synthSustain ?? 80,
             t.conf.synthRelease ?? 15,
             {
+              volume: t.conf.synthVolume ?? 80,
               delayOn: !!t.conf.synthDelayOn,
               delayTime: t.conf.synthDelayTime ?? 30,
               delayFb: t.conf.synthDelayFeedback ?? 25,
@@ -415,6 +416,7 @@ export default function App() {
                               selectedTrack.conf.synthSustain ?? 80,
                               selectedTrack.conf.synthRelease ?? 15,
                               {
+                                volume: selectedTrack.conf.synthVolume ?? 80,
                                 delayOn: !!selectedTrack.conf.synthDelayOn,
                                 delayTime:
                                   selectedTrack.conf.synthDelayTime ?? 30,

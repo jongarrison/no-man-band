@@ -267,7 +267,8 @@ export default function useSynth() {
       const ctx = getAudioCtx();
       const output = getOutput();
       const freq = midiToFreq(midi);
-      const vol = Math.min(0.18, (velocity / 127) * 0.15);
+      const trackVol = Math.max(0, Math.min(100, fxParams.volume ?? 80)) / 100;
+      const vol = Math.min(0.18, (velocity / 127) * 0.15) * trackVol;
 
       applyFx(fxParams);
 

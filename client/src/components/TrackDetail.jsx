@@ -489,21 +489,36 @@ export default function TrackDetail({
         <div style={synthControlsRow}>
           <div style={fxGroup}>
             <span style={fxSectionLabel}>Voice</span>
-            <div style={voiceRow}>
-              {Object.entries(SYNTH_VOICES).map(([key, v]) => (
-                <button
-                  key={key}
-                  style={voiceBtn(key === (conf.synthVoice ?? "keys"))}
-                  onClick={() =>
-                    patch({
-                      synthVoice: key,
-                      ...VOICE_DEFAULTS[key],
-                    })
-                  }
-                >
-                  {v.label}
-                </button>
-              ))}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div style={voiceRow}>
+                {Object.entries(SYNTH_VOICES).map(([key, v]) => (
+                  <button
+                    key={key}
+                    style={voiceBtn(key === (conf.synthVoice ?? "keys"))}
+                    onClick={() =>
+                      patch({
+                        synthVoice: key,
+                        ...VOICE_DEFAULTS[key],
+                      })
+                    }
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+              <div style={adsrKnobWrap}>
+                <Knob
+                  value={conf.synthVolume ?? 80}
+                  onChange={(e) => patch({ synthVolume: e.value })}
+                  size={40}
+                  strokeWidth={6}
+                  valueColor="#fff"
+                  rangeColor="rgba(255,255,255,0.1)"
+                  textColor="rgba(255,255,255,0.65)"
+                  valueTemplate={"{value}"}
+                />
+                <span style={adsrLabel}>Vol</span>
+              </div>
             </div>
           </div>
 

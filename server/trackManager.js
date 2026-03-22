@@ -154,6 +154,7 @@ function createDefaultConf() {
     release: 80,
     internalAudio: false,
     synthVoice: "keys",
+    synthVolume: 80,
     synthLpf: 100,
     synthRes: 0,
     synthAttack: 1,
