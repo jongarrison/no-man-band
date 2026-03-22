@@ -7,7 +7,13 @@ const VIZ_BG = {
   retro: null,
 };
 
-export default function Visualizer({ onNoteRef, theme = "clean" }) {
+export default function Visualizer({
+  onNoteRef,
+  theme = "clean",
+  octaveStart = 2,
+  octaveEnd = 5,
+  pianoWidth = 860,
+}) {
   const containerRef = useRef(null);
   const sketchRef = useRef(null);
   const themeRef = useRef(theme);
@@ -174,17 +180,34 @@ export default function Visualizer({ onNoteRef, theme = "clean" }) {
       p.noStroke();
     }
 
-    function noteToX(note, w) {
-      return ((note - 24) / 88) * w * 0.8 + w * 0.1;
+    const BLACK_SET = new Set([1, 3, 6, 8, 10]);
+    function noteToX(note) {
+      const pw = pianoWidth;
+      const cardLeft = (window.innerWidth - pw) / 2;
+      const midiMin = 24 + octaveStart * 12;
+      const midiMax = 24 + (octaveEnd + 1) * 12 - 1;
+      let totalWhite = 0;
+      for (let m = midiMin; m <= midiMax; m++) {
+        if (!BLACK_SET.has((m - 24) % 12)) totalWhite++;
+      }
+      const whiteW = pw / totalWhite;
+      let whiteIdx = 0;
+      for (let m = midiMin; m < note; m++) {
+        if (!BLACK_SET.has((m - 24) % 12)) whiteIdx++;
+      }
+      const isBlack = BLACK_SET.has((note - 24) % 12);
+      const localX = isBlack
+        ? whiteIdx * whiteW
+        : whiteIdx * whiteW + whiteW / 2;
+      return cardLeft + localX;
     }
 
     sketchRef.current = new p5(sketch, containerRef.current);
 
     onNoteRef.current = (data) => {
-      const w = window.innerWidth;
       const h = window.innerHeight;
       const rgb = trackRgb(data.trackId, 0.85, 0.65);
-      const noteX = noteToX(data.note, w);
+      const noteX = noteToX(data.note);
 
       energy = Math.min(100, energy + 8);
 

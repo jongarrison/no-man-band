@@ -335,6 +335,17 @@ io.on("connection", (socket) => {
       tm.metronome = !!patch.metronome;
       tm._emitState();
     }
+    if (patch.genVelocity !== undefined) {
+      tm.genVelocity = !!patch.genVelocity;
+      tm._emitState();
+    }
+    if (patch.genVelocitySpread !== undefined) {
+      tm.genVelocitySpread = Math.max(
+        0,
+        Math.min(100, Number(patch.genVelocitySpread)),
+      );
+      tm._emitState();
+    }
   });
 
   socket.on("start", () => tm.start());

@@ -127,10 +127,11 @@ export default function GlobalControls({
           style={{
             ...btnBase,
             background: metronome ? "var(--toggle-active-bg)" : "var(--btn-bg)",
-            padding: "5px 8px",
             display: "inline-flex",
             alignItems: "center",
             gap: 5,
+            boxSizing: "border-box",
+            height: 29,
           }}
           onClick={() => emit("setConf", { metronome: !metronome })}
           title={metronome ? "Metronome on" : "Metronome off"}

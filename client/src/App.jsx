@@ -111,7 +111,13 @@ export default function App() {
   return (
     <ThemeProvider value={theme}>
       {!generativeMode && (
-        <Visualizer onNoteRef={visualizerNoteRef} theme={theme} />
+        <Visualizer
+          onNoteRef={visualizerNoteRef}
+          theme={theme}
+          octaveStart={pianoOctStart}
+          octaveEnd={pianoOctEnd}
+          pianoWidth={CONTAINER_WIDTH}
+        />
       )}
 
       {generativeMode && (
@@ -200,6 +206,40 @@ export default function App() {
                   style={{ width: 120, cursor: "pointer" }}
                 />
               </label>
+              <button
+                style={{
+                  ...genBackBtn,
+                  background: state.genVelocity
+                    ? "rgba(255,255,255,0.2)"
+                    : "rgba(255,255,255,0.08)",
+                  padding: "5px 10px",
+                }}
+                onClick={() =>
+                  emit("setConf", { genVelocity: !state.genVelocity })
+                }
+                title={
+                  state.genVelocity ? "Random velocity" : "Fixed velocity 100"
+                }
+              >
+                Vel {state.genVelocity ? "ON" : "OFF"}
+              </button>
+              {state.genVelocity && (
+                <label style={genLabel}>
+                  Spread {state.genVelocitySpread ?? 50}%
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={state.genVelocitySpread ?? 50}
+                    onChange={(e) =>
+                      emit("setConf", {
+                        genVelocitySpread: Number(e.target.value),
+                      })
+                    }
+                    style={{ width: 80, cursor: "pointer" }}
+                  />
+                </label>
+              )}
             </div>
           </div>
         ) : (

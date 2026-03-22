@@ -20,7 +20,7 @@ export default function GenerativeVisualizer({ tracks, onNoteRef, theme }) {
 
     const pulseStates = {};
     const drifters = [];
-    const MAX_DRIFTERS = 80;
+    const MAX_DRIFTERS = 30;
 
     const noteHitQueue = {};
 

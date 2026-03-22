@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { trackCss } from "../trackColor.js";
 
-function DualRangeSlider({ min, max, low, high, onChange }) {
+function DualRangeSlider({ min, max, low, high, onChange, showTicks = true }) {
   const trackRef = useRef(null);
   const [lowOnTop, setLowOnTop] = useState(false);
   const pctLow = ((low - min) / (max - min)) * 100;
@@ -51,13 +51,15 @@ function DualRangeSlider({ min, max, low, high, onChange }) {
         }}
         style={{ ...sliderInput, zIndex: lowOnTop ? 2 : 3 }}
       />
-      <div style={sliderTicks}>
-        {Array.from({ length: max - min + 1 }, (_, i) => (
-          <span key={i} style={sliderTickLabel}>
-            {min + i}
-          </span>
-        ))}
-      </div>
+      {showTicks && (
+        <div style={sliderTicks}>
+          {Array.from({ length: max - min + 1 }, (_, i) => (
+            <span key={i} style={sliderTickLabel}>
+              {min + i}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -281,7 +283,10 @@ export default function TrackDetail({
             </>
           )}
           <label style={labelStyle}>
-            Oct {conf.octaveMin ?? octaveStart}–{conf.octaveMax ?? octaveEnd}
+            Oct{" "}
+            {(conf.octaveMin ?? octaveStart) === (conf.octaveMax ?? octaveEnd)
+              ? (conf.octaveMin ?? octaveStart)
+              : `${conf.octaveMin ?? octaveStart}–${conf.octaveMax ?? octaveEnd}`}
             <DualRangeSlider
               min={octaveStart}
               max={octaveEnd}
@@ -305,6 +310,37 @@ export default function TrackDetail({
               }}
               style={{ ...selectStyle, width: 50, textAlign: "center" }}
             />
+          </label>
+          <label style={{ ...labelStyle, gap: 4 }}>
+            Vel
+            <button
+              style={{
+                ...velToggle,
+                background: conf.velocityOn
+                  ? "var(--toggle-active-bg)"
+                  : "var(--btn-bg)",
+              }}
+              onClick={() => patch({ velocityOn: !conf.velocityOn })}
+            >
+              {conf.velocityOn ? "ON" : "OFF"}
+            </button>
+            {conf.velocityOn && (
+              <>
+                <span style={{ fontSize: 10, opacity: 0.6 }}>
+                  {conf.velocityMin ?? 60}–{conf.velocityMax ?? 120}
+                </span>
+                <DualRangeSlider
+                  min={1}
+                  max={127}
+                  low={conf.velocityMin ?? 60}
+                  high={conf.velocityMax ?? 120}
+                  onChange={(lo, hi) =>
+                    patch({ velocityMin: lo, velocityMax: hi })
+                  }
+                  showTicks={false}
+                />
+              </>
+            )}
           </label>
           <button
             style={{
@@ -519,6 +555,16 @@ const octLabel = {
 const noteRest = {
   ...noteChip,
   color: "var(--note-rest-color)",
+};
+
+const velToggle = {
+  padding: "2px 6px",
+  border: "none",
+  borderRadius: 4,
+  color: "var(--btn-color)",
+  cursor: "pointer",
+  fontSize: 10,
+  fontWeight: 600,
 };
 
 const randomizeBtn = {

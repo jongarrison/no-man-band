@@ -168,7 +168,7 @@ export default function TrackControls({
             fill="none"
             stroke="currentColor"
             strokeWidth="10"
-            style={{ opacity: 0.5 }}
+            style={{ opacity: 0.5, marginRight: 4 }}
           >
             <circle cx="50" cy="50" r="42" />
             <line x1="50" y1="50" x2="50" y2="20" strokeLinecap="round" />

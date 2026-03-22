@@ -24,7 +24,7 @@ export default function useMetronome() {
     osc.type = "sine";
 
     const now = ctx.currentTime;
-    gain.gain.setValueAtTime(isDownbeat ? 0.6 : 0.4, now);
+    gain.gain.setValueAtTime(isDownbeat ? 1.0 : 0.7, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
 
     osc.start(now);

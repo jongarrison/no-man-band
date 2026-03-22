@@ -145,6 +145,9 @@ function createDefaultConf() {
     timeDivision: 4,
     key,
     mode,
+    velocityOn: false,
+    velocityMin: 60,
+    velocityMax: 120,
   };
 }
 
@@ -158,12 +161,29 @@ class Track {
     this._paused = false;
   }
 
+  _getVelocity(genVelocity, genVelocitySpread) {
+    if (genVelocity !== undefined && genVelocity) {
+      const spread = genVelocitySpread || 50;
+      const center = 100;
+      const half = Math.round((spread / 100) * 63);
+      const min = Math.max(1, center - half);
+      const max = Math.min(127, center + half);
+      return randInt(min, max);
+    }
+    if (this.conf.velocityOn) {
+      const lo = Math.max(1, Math.min(127, this.conf.velocityMin || 60));
+      const hi = Math.max(lo, Math.min(127, this.conf.velocityMax || 120));
+      return randInt(lo, hi);
+    }
+    return 100;
+  }
+
   sendNote(noteNumber, bpm, velocity = 100) {
     if (!this.conf.active) return null;
     const noteOn = 143 + this.conf.midiChannel;
     const noteOff = 127 + this.conf.midiChannel;
     console.log(
-      `[track-${this.id}] sendNote midi=${noteNumber} ch=${this.conf.midiChannel} connected=${this.output.isConnected()} port=${this.output.getConnectedPort()}`,
+      `[track-${this.id}] sendNote midi=${noteNumber} ch=${this.conf.midiChannel} vel=${velocity} connected=${this.output.isConnected()} port=${this.output.getConnectedPort()}`,
     );
     this.output.sendMessage([noteOn, noteNumber, velocity]);
 
@@ -175,20 +195,21 @@ class Track {
     return { trackId: this.id, note: noteNumber, velocity };
   }
 
-  playCycle(bpm) {
+  playCycle(bpm, genVelocity, genVelocitySpread) {
     const cycle = this._cycle;
     this._cycle++;
+    const vel = this._getVelocity(genVelocity, genVelocitySpread);
     const events = [];
     if (this.conf.playScaleOn) {
-      const e = this._playScale(cycle, bpm);
+      const e = this._playScale(cycle, bpm, vel);
       if (e) events.push(e);
     }
     if (this.conf.playBeatOn) {
-      const e = this._playBeat(cycle, bpm);
+      const e = this._playBeat(cycle, bpm, vel);
       if (e) events.push(e);
     }
     if (this.conf.playImpromptuOn) {
-      const e = this._playImpromptu(cycle, bpm);
+      const e = this._playImpromptu(cycle, bpm, vel);
       if (e) events.push(e);
     }
     return events;
@@ -204,23 +225,23 @@ class Track {
     this.output.disconnect();
   }
 
-  _playScale(cycle, bpm) {
+  _playScale(cycle, bpm, vel) {
     const scaleNotes = getScaleNotes(this.conf.key, this.conf.mode);
     const idx = cycle % scaleNotes.length;
     const noteName = scaleNotes[idx];
     const oct = randInt(this.conf.octaveMin, this.conf.octaveMax);
     const noteNumber = noteHelper.notes[noteName] + oct * 12;
-    return this.sendNote(noteNumber, bpm);
+    return this.sendNote(noteNumber, bpm, vel);
   }
 
-  _playBeat(cycle, bpm) {
+  _playBeat(cycle, bpm, vel) {
     const pos = cycle % 4;
-    if (pos === 2) return this.sendNote(24 + 5 * 12, bpm);
-    if (pos === 3) return this.sendNote(24 + 6 * 12, bpm);
+    if (pos === 2) return this.sendNote(24 + 5 * 12, bpm, vel);
+    if (pos === 3) return this.sendNote(24 + 6 * 12, bpm, vel);
     return null;
   }
 
-  _playImpromptu(cycle, bpm) {
+  _playImpromptu(cycle, bpm, vel) {
     let result = [];
     for (const idx of this.conf.impromptuInputsCycle) {
       result = result.concat(this.conf.impromptuInputs[idx]);
@@ -234,7 +255,7 @@ class Track {
       const oct =
         this.conf.impromptuOctaves?.[pos] ?? this.conf.impromptuOctave;
       noteNumber = noteNumber + oct * 12;
-      const event = this.sendNote(noteNumber, bpm);
+      const event = this.sendNote(noteNumber, bpm, vel);
       if (event) event.seqPos = pos;
       return event || { trackId: this.id, seqPos: pos, rest: true };
     }
@@ -258,6 +279,8 @@ class TrackManager extends EventEmitter {
     this.stepsMax = 16;
     this.generativeMode = false;
     this.metronome = false;
+    this.genVelocity = false;
+    this.genVelocitySpread = 50;
   }
 
   addTrack() {
@@ -347,6 +370,10 @@ class TrackManager extends EventEmitter {
     c.impromptuInputs = seq.impromptuInputs;
     c.impromptuInputsCycle = seq.impromptuInputsCycle;
     c.impromptuOctaves = seq.impromptuOctaves;
+    c.velocityOn = Math.random() < 0.5;
+    const vLo = randInt(30, 100);
+    c.velocityMin = vLo;
+    c.velocityMax = randInt(vLo, 127);
     this._emitState();
   }
 
@@ -361,6 +388,10 @@ class TrackManager extends EventEmitter {
       c.impromptuInputs = seq.impromptuInputs;
       c.impromptuInputsCycle = seq.impromptuInputsCycle;
       c.impromptuOctaves = seq.impromptuOctaves;
+      c.velocityOn = Math.random() < 0.5;
+      const vLo = randInt(30, 100);
+      c.velocityMin = vLo;
+      c.velocityMax = randInt(vLo, 127);
     }
     this._emitState();
   }
@@ -530,6 +561,12 @@ class TrackManager extends EventEmitter {
       c.timeDivision = randInt(1, 4);
     }
 
+    if (Math.random() < 0.3) {
+      const [lo, hi] = this._randomizeOctRange();
+      c.octaveMin = lo;
+      c.octaveMax = hi;
+    }
+
     if (Math.random() < 0.15) {
       const newSteps = randInt(this.stepsMin, this.stepsMax);
       const seq = generateRandomSequence(
@@ -630,6 +667,8 @@ class TrackManager extends EventEmitter {
       stepsMax: this.stepsMax,
       generativeMode: this.generativeMode,
       metronome: this.metronome,
+      genVelocity: this.genVelocity,
+      genVelocitySpread: this.genVelocitySpread,
       tracks: this.tracks.map((t) => ({
         id: t.id,
         conf: { ...t.conf },
@@ -670,7 +709,9 @@ class TrackManager extends EventEmitter {
       if (!shouldPlay) continue;
 
       const prevSeqPos = track._seqPos;
-      const events = track.playCycle(effectiveBPM);
+      const gv = this.generativeMode ? this.genVelocity : false;
+      const gs = this.generativeMode ? this.genVelocitySpread : 50;
+      const events = track.playCycle(effectiveBPM, gv, gs);
 
       if (
         this.generativeMode &&
