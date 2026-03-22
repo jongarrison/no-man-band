@@ -153,6 +153,7 @@ function createDefaultConf() {
     velocityMax: 120,
     release: 80,
     internalAudio: false,
+    synthVoice: "keys",
     synthLpf: 100,
     synthRes: 0,
     synthAttack: 1,

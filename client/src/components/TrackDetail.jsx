@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Knob } from "primereact/knob";
 import { trackCss, trackRgb } from "../trackColor.js";
 import { ALL_NOTES, MODES, displayNote, getScaleNotes } from "../scaleUtils.js";
+import { SYNTH_VOICES, VOICE_DEFAULTS } from "../useSynth.js";
 
 function DualRangeSlider({ min, max, low, high, onChange, showTicks = true }) {
   const trackRef = useRef(null);
@@ -486,6 +487,28 @@ export default function TrackDetail({
 
       {conf.internalAudio && (
         <div style={synthControlsRow}>
+          <div style={fxGroup}>
+            <span style={fxSectionLabel}>Voice</span>
+            <div style={voiceRow}>
+              {Object.entries(SYNTH_VOICES).map(([key, v]) => (
+                <button
+                  key={key}
+                  style={voiceBtn(key === (conf.synthVoice ?? "keys"))}
+                  onClick={() =>
+                    patch({
+                      synthVoice: key,
+                      ...VOICE_DEFAULTS[key],
+                    })
+                  }
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={fxDivider} />
+
           <div style={fxGroup}>
             <span style={fxSectionLabel}>Filter</span>
             <div style={adsrRow}>
@@ -984,6 +1007,24 @@ const fxSectionLabel = {
   letterSpacing: 0.5,
   textTransform: "uppercase",
 };
+
+const voiceRow = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 3,
+};
+
+const voiceBtn = (active) => ({
+  padding: "2px 7px",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 3,
+  background: active ? "var(--toggle-active-bg)" : "transparent",
+  color: active ? "#fff" : "rgba(255,255,255,0.5)",
+  cursor: "pointer",
+  fontSize: 9,
+  fontWeight: 600,
+  transition: "background 0.12s, color 0.12s",
+});
 
 const fxToggleBtn = (on) => ({
   display: "inline-flex",

@@ -114,6 +114,7 @@ export default function App() {
               reverbTone: t.conf.synthReverbTone ?? 70,
               reverbMix: t.conf.synthReverbMix ?? 25,
             },
+            t.conf.synthVoice ?? "keys",
           );
         }
       }
@@ -429,6 +430,7 @@ export default function App() {
                                 reverbMix:
                                   selectedTrack.conf.synthReverbMix ?? 25,
                               },
+                              selectedTrack.conf.synthVoice ?? "keys",
                             )
                         : null
                     }
