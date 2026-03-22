@@ -33,6 +33,8 @@ export default function App() {
   const visualizerNoteRef = useRef(null);
   const genVizNoteRef = useRef(null);
   const metronome = useMetronome();
+  const [genUiVisible, setGenUiVisible] = useState(true);
+  const genIdleTimer = useRef(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -108,6 +110,26 @@ export default function App() {
   const selectedTrack = state?.tracks.find((t) => t.id === selectedTrackId);
   const generativeMode = state?.generativeMode;
 
+  useEffect(() => {
+    if (!generativeMode) {
+      setGenUiVisible(true);
+      return;
+    }
+    const show = () => {
+      setGenUiVisible(true);
+      clearTimeout(genIdleTimer.current);
+      genIdleTimer.current = setTimeout(() => setGenUiVisible(false), 3000);
+    };
+    show();
+    window.addEventListener("mousemove", show);
+    window.addEventListener("mousedown", show);
+    return () => {
+      window.removeEventListener("mousemove", show);
+      window.removeEventListener("mousedown", show);
+      clearTimeout(genIdleTimer.current);
+    };
+  }, [generativeMode]);
+
   return (
     <ThemeProvider value={theme}>
       {!generativeMode && (
@@ -144,7 +166,16 @@ export default function App() {
             <p style={{ textAlign: "center", padding: 40 }}>Connecting...</p>
           </div>
         ) : generativeMode ? (
-          <div style={genOverlayStyle}>
+          <div
+            style={{
+              ...genOverlayStyle,
+              opacity: genUiVisible ? 1 : 0,
+              transition: genUiVisible
+                ? "opacity 0.3s ease"
+                : "opacity 5s ease",
+              pointerEvents: genUiVisible ? "auto" : "none",
+            }}
+          >
             <button
               style={genBackBtn}
               onClick={() => emit("setConf", { generativeMode: false })}
@@ -162,6 +193,8 @@ export default function App() {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 5,
+                  height: 32,
+                  boxSizing: "border-box",
                 }}
                 onClick={() => emit("setConf", { metronome: !state.metronome })}
                 title={state.metronome ? "Metronome on" : "Metronome off"}
@@ -197,7 +230,7 @@ export default function App() {
                 BPM {state.BPM}
                 <input
                   type="range"
-                  min={30}
+                  min={10}
                   max={300}
                   value={state.BPM}
                   onChange={(e) =>
@@ -213,6 +246,8 @@ export default function App() {
                     ? "rgba(255,255,255,0.2)"
                     : "rgba(255,255,255,0.08)",
                   padding: "5px 10px",
+                  height: 32,
+                  boxSizing: "border-box",
                 }}
                 onClick={() =>
                   emit("setConf", { genVelocity: !state.genVelocity })

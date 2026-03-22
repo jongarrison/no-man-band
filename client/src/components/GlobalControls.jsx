@@ -168,7 +168,7 @@ export default function GlobalControls({
           BPM {BPM}
           <input
             type="range"
-            min={30}
+            min={10}
             max={300}
             value={BPM}
             onChange={(e) => emit("setConf", { BPM: Number(e.target.value) })}
@@ -232,7 +232,20 @@ export default function GlobalControls({
           onClick={() => onGenerativeToggle && onGenerativeToggle(true)}
           title="Enter generative mode"
         >
-          ∞ Generative
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ verticalAlign: "middle", marginRight: 4 }}
+          >
+            <polyline points="2 12 5 6 8 18 11 8 14 16 17 4 20 14 22 12" />
+          </svg>
+          Generative
         </button>
 
         {!cliMode && (
