@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { trackCss, trackRgb } from "../trackColor.js";
-import { getScaleNotes } from "../scaleUtils.js";
+import { ALL_NOTES, MODES, displayNote, getScaleNotes } from "../scaleUtils.js";
 
 function DualRangeSlider({ min, max, low, high, onChange, showTicks = true }) {
   const trackRef = useRef(null);
@@ -119,46 +119,9 @@ const sliderTicks = {
 
 const sliderTickLabel = { textAlign: "center", width: 10 };
 
-const ALL_NOTES = [
-  "C",
-  "Cs",
-  "D",
-  "Ds",
-  "E",
-  "F",
-  "Fs",
-  "G",
-  "Gs",
-  "A",
-  "As",
-  "B",
-];
-const MODES = [
-  "major",
-  "minor",
-  "dorian",
-  "phrygian",
-  "lydian",
-  "mixolydian",
-  "locrian",
-  "harm minor",
-  "mel minor",
-  "maj pent",
-  "min pent",
-  "blues",
-  "chromatic",
-];
-
 const NOTE_OPTIONS = ["", ...ALL_NOTES];
 
 const SHOW_MANUAL_EDITOR = false;
-
-function displayNote(n) {
-  if (!n) return "·";
-  if (n.length === 2 && n[1] === "s") return n[0] + "♯";
-  if (n.length === 2 && n[1] === "b") return n[0] + "♭";
-  return n;
-}
 
 function flattenSequence(inputs, cycle, octaves) {
   let result = [];
@@ -186,6 +149,10 @@ export default function TrackDetail({
   const [flashing, setFlashing] = useState(false);
   const flashTimer = useRef(null);
   const [listening, setListening] = useState(false);
+
+  useEffect(() => {
+    return () => clearTimeout(flashTimer.current);
+  }, []);
   const [manualNotes, setManualNotes] = useState([]);
   const [reassignIdx, setReassignIdx] = useState(null);
 
@@ -279,9 +246,14 @@ export default function TrackDetail({
     [listening, reassignIdx, emit, id],
   );
 
-  if (pianoKeyRef) {
-    pianoKeyRef.current = listening ? handlePianoKey : null;
-  }
+  useEffect(() => {
+    if (pianoKeyRef) {
+      pianoKeyRef.current = listening ? handlePianoKey : null;
+    }
+    return () => {
+      if (pianoKeyRef) pianoKeyRef.current = null;
+    };
+  }, [listening, handlePianoKey, pianoKeyRef]);
 
   const updateNote = (rowIdx, colIdx, value) => {
     const newInputs = conf.impromptuInputs.map((row) => [...row]);

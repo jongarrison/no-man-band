@@ -68,12 +68,15 @@ export default function Piano({
     [scaleHighlight],
   );
 
-  const activeMap = new Map();
-  for (const n of activeNotes) {
-    if (!activeMap.has(n.note)) activeMap.set(n.note, []);
-    const ids = activeMap.get(n.note);
-    if (!ids.includes(n.trackId)) ids.push(n.trackId);
-  }
+  const activeMap = useMemo(() => {
+    const map = new Map();
+    for (const n of activeNotes) {
+      if (!map.has(n.note)) map.set(n.note, []);
+      const ids = map.get(n.note);
+      if (!ids.includes(n.trackId)) ids.push(n.trackId);
+    }
+    return map;
+  }, [activeNotes]);
 
   const colorFor = (midi) => {
     const ids = activeMap.get(midi);
@@ -111,14 +114,18 @@ export default function Piano({
     }
   };
 
-  const blackXFor = (key) => {
+  const blackXMap = useMemo(() => {
+    const map = new Map();
     let whiteIdx = 0;
     for (const k of allKeys) {
-      if (k.midi === key.midi) break;
-      if (!k.isBlack) whiteIdx++;
+      if (k.isBlack) {
+        map.set(k.midi, whiteIdx * whiteW - blackW / 2);
+      } else {
+        whiteIdx++;
+      }
     }
-    return whiteIdx * whiteW - blackW / 2;
-  };
+    return map;
+  }, [allKeys, whiteW, blackW]);
 
   return (
     <svg
@@ -146,7 +153,7 @@ export default function Piano({
       {blackKeys.map((key) => (
         <rect
           key={key.midi}
-          x={blackXFor(key)}
+          x={blackXMap.get(key.midi)}
           y={0}
           width={blackW}
           height={blackH}

@@ -62,22 +62,6 @@ export default function CliPanel({ emit, evalResults }) {
 
   return (
     <div style={wrapper} onClick={() => inputRef.current?.focus()}>
-      <style>{`
-        @keyframes crtBlink {
-          0%, 49% { opacity: 1; }
-          50%, 100% { opacity: 0; }
-        }
-        .crt-input { caret-color: transparent; }
-        .crt-cursor {
-          display: inline-block;
-          width: 9px;
-          height: 1.1em;
-          background: #39ff14;
-          box-shadow: 0 0 4px #39ff14;
-          vertical-align: text-bottom;
-          animation: crtBlink 1s step-end infinite;
-        }
-      `}</style>
       <div style={scanlineOverlay} />
       <div ref={logRef} style={logArea}>
         {evalResults.map((entry, i) => (

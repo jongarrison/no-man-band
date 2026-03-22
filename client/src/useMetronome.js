@@ -5,6 +5,7 @@ let audioCtx = null;
 function getAudioCtx() {
   if (!audioCtx)
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
   return audioCtx;
 }
 
@@ -29,6 +30,10 @@ export default function useMetronome() {
 
     osc.start(now);
     osc.stop(now + 0.06);
+    osc.onended = () => {
+      gain.disconnect();
+      osc.disconnect();
+    };
   }, []);
 
   const setEnabled = useCallback((v) => {

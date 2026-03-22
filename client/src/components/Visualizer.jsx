@@ -239,6 +239,8 @@ export default function Visualizer({
 
     return () => {
       sketchRef.current?.remove();
+      sketchRef.current = null;
+      if (onNoteRef) onNoteRef.current = null;
     };
   }, [onNoteRef]);
 

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { io } from "socket.io-client";
 import { ThemeProvider } from "./ThemeContext.jsx";
 import { setTrackColorConfig, THEME_TRACK_COLORS } from "./trackColor.js";
@@ -35,6 +41,8 @@ export default function App() {
   const visualizerNoteRef = useRef(null);
   const genVizNoteRef = useRef(null);
   const metronome = useMetronome();
+  const metronomeRef = useRef(metronome);
+  metronomeRef.current = metronome;
   const [genUiVisible, setGenUiVisible] = useState(true);
   const genIdleTimer = useRef(null);
   const [manualListening, setManualListening] = useState(false);
@@ -53,7 +61,7 @@ export default function App() {
     socket.on("ports", setPorts);
     socket.on("state", (s) => {
       setState(s);
-      metronome.setEnabled(!!s.metronome);
+      metronomeRef.current.setEnabled(!!s.metronome);
       if (!s.playing && !s.paused) {
         setSeqPositions({});
       }
@@ -100,10 +108,14 @@ export default function App() {
       setEvalResults((prev) => [...prev, data]);
     });
     socket.on("tick", (data) => {
-      metronome.tick(data);
+      metronomeRef.current.tick(data);
     });
 
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect();
+      Object.values(activeTimers.current).forEach(clearTimeout);
+      activeTimers.current = {};
+    };
   }, []);
 
   const emit = useCallback(
@@ -113,6 +125,20 @@ export default function App() {
 
   const selectedTrack = state?.tracks.find((t) => t.id === selectedTrackId);
   const generativeMode = state?.generativeMode;
+
+  const scaleHighlight = useMemo(
+    () =>
+      manualListening && selectedTrack
+        ? getScaleNotes(selectedTrack.conf.key, selectedTrack.conf.mode)
+        : null,
+    [manualListening, selectedTrack?.conf.key, selectedTrack?.conf.mode],
+  );
+
+  const highlightColor = useMemo(
+    () =>
+      manualListening && selectedTrack ? trackRgb(selectedTrack.id) : null,
+    [manualListening, selectedTrack?.id],
+  );
 
   useEffect(() => {
     setManualListening(false);
@@ -331,6 +357,7 @@ export default function App() {
                 </div>
                 {selectedTrack && (
                   <TrackDetail
+                    key={selectedTrack.id}
                     track={selectedTrack}
                     emit={emit}
                     seqPos={seqPositions[selectedTrack.id]}
@@ -350,19 +377,8 @@ export default function App() {
               octaveStart={pianoOctStart}
               octaveEnd={pianoOctEnd}
               listening={manualListening}
-              scaleHighlight={
-                manualListening && selectedTrack
-                  ? getScaleNotes(
-                      selectedTrack.conf.key,
-                      selectedTrack.conf.mode,
-                    )
-                  : null
-              }
-              highlightColor={
-                manualListening && selectedTrack
-                  ? trackRgb(selectedTrack.id)
-                  : null
-              }
+              scaleHighlight={scaleHighlight}
+              highlightColor={highlightColor}
               onKeyClick={
                 manualListening ? (data) => pianoKeyRef.current?.(data) : null
               }

@@ -29,6 +29,15 @@ export const SCALES = {
   chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
 };
 
+export const MODES = Object.keys(SCALES);
+
+export function displayNote(n) {
+  if (!n) return "·";
+  if (n.length === 2 && n[1] === "s") return n[0] + "♯";
+  if (n.length === 2 && n[1] === "b") return n[0] + "♭";
+  return n;
+}
+
 export function getScaleNotes(key, mode) {
   const root = ALL_NOTES.indexOf(key);
   const intervals = SCALES[mode] || SCALES.major;

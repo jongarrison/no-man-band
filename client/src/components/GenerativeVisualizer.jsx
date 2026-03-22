@@ -214,8 +214,15 @@ export default function GenerativeVisualizer({ tracks, onNoteRef, theme }) {
     }
 
     return () => {
+      if (waveGfx) {
+        waveGfx.remove();
+        waveGfx = null;
+      }
       sketchRef.current?.remove();
+      sketchRef.current = null;
       if (onNoteRef) onNoteRef.current = null;
+      for (const key in pulseStates) delete pulseStates[key];
+      drifters.length = 0;
     };
   }, [onNoteRef]);
 

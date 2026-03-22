@@ -279,34 +279,39 @@ io.on("connection", (socket) => {
     tm.addTrack();
   });
 
-  socket.on("removeTrack", ({ trackId }) => {
-    tm.removeTrack(trackId);
+  socket.on("removeTrack", (data) => {
+    if (data?.trackId != null) tm.removeTrack(data.trackId);
   });
 
-  socket.on("connectPort", ({ trackId, portIndex }) => {
-    tm.connectPort(trackId, portIndex);
+  socket.on("connectPort", (data) => {
+    if (!data || typeof data.trackId === "undefined") return;
+    tm.connectPort(data.trackId, data.portIndex);
     socket.emit("state", tm.getState());
   });
 
-  socket.on("disconnectPort", ({ trackId }) => {
-    tm.disconnectPort(trackId);
+  socket.on("disconnectPort", (data) => {
+    if (!data || typeof data.trackId === "undefined") return;
+    tm.disconnectPort(data.trackId);
     socket.emit("state", tm.getState());
   });
 
-  socket.on("setTrackConf", ({ trackId, patch }) => {
-    tm.setTrackConf(trackId, patch);
+  socket.on("setTrackConf", (data) => {
+    if (!data || typeof data.trackId === "undefined" || !data.patch) return;
+    tm.setTrackConf(data.trackId, data.patch);
   });
 
-  socket.on("randomize", ({ trackId }) => {
-    tm.randomizeTrack(trackId);
+  socket.on("randomize", (data) => {
+    if (!data || typeof data.trackId === "undefined") return;
+    tm.randomizeTrack(data.trackId);
   });
 
   socket.on("randomizeAll", () => {
     tm.randomizeAll();
   });
 
-  socket.on("setTrackSteps", ({ trackId, steps }) => {
-    tm.setTrackSteps(trackId, steps);
+  socket.on("setTrackSteps", (data) => {
+    if (!data || typeof data.trackId === "undefined") return;
+    tm.setTrackSteps(data.trackId, Number(data.steps));
   });
 
   socket.on("setConf", (patch) => {
@@ -352,14 +357,26 @@ io.on("connection", (socket) => {
   socket.on("pause", () => tm.pause());
   socket.on("stop", () => tm.stop());
 
-  socket.on("startTrack", ({ trackId }) => tm.startTrack(trackId));
-  socket.on("pauseTrack", ({ trackId }) => tm.pauseTrack(trackId));
-  socket.on("stopTrack", ({ trackId }) => tm.stopTrack(trackId));
+  socket.on("startTrack", (data) => {
+    if (data?.trackId != null) tm.startTrack(data.trackId);
+  });
+  socket.on("pauseTrack", (data) => {
+    if (data?.trackId != null) tm.pauseTrack(data.trackId);
+  });
+  socket.on("stopTrack", (data) => {
+    if (data?.trackId != null) tm.stopTrack(data.trackId);
+  });
 
-  socket.on("previewNote", ({ trackId, midi }) => {
-    const track = tm.getTrack(trackId);
+  socket.on("previewNote", (data) => {
+    if (
+      !data ||
+      typeof data.trackId === "undefined" ||
+      typeof data.midi !== "number"
+    )
+      return;
+    const track = tm.getTrack(data.trackId);
     if (track && track.output.isConnected()) {
-      track.sendNote(midi, tm.BPM, 100);
+      track.sendNote(data.midi, tm.BPM, 100);
     }
   });
 
@@ -396,3 +413,22 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`server listening on http://localhost:${PORT}`);
 });
+
+function gracefulShutdown(signal) {
+  console.log(`\n${signal} received, shutting down...`);
+  tm.stop();
+  for (const track of tm.tracks) {
+    track.allNotesOff();
+    track.output.disconnect();
+  }
+  io.close(() => {
+    server.close(() => {
+      console.log("server closed");
+      process.exit(0);
+    });
+  });
+  setTimeout(() => process.exit(1), 3000);
+}
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

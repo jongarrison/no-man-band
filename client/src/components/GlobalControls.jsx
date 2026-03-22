@@ -1,41 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { ALL_NOTES, MODES, displayNote } from "../scaleUtils.js";
 
 const OCT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
-const ALL_NOTES = [
-  "C",
-  "Cs",
-  "D",
-  "Ds",
-  "E",
-  "F",
-  "Fs",
-  "G",
-  "Gs",
-  "A",
-  "As",
-  "B",
-];
-const MODES = [
-  "major",
-  "minor",
-  "dorian",
-  "phrygian",
-  "lydian",
-  "mixolydian",
-  "locrian",
-  "harm minor",
-  "mel minor",
-  "maj pent",
-  "min pent",
-  "blues",
-  "chromatic",
-];
-
-function displayNote(n) {
-  if (n.length === 2 && n[1] === "s") return n[0] + "♯";
-  if (n.length === 2 && n[1] === "b") return n[0] + "♭";
-  return n;
-}
 
 export default function GlobalControls({
   BPM,
@@ -59,6 +25,7 @@ export default function GlobalControls({
 }) {
   const [randFlash, setRandFlash] = useState(false);
   const randTimer = useRef(null);
+  useEffect(() => () => clearTimeout(randTimer.current), []);
   const [localMin, setLocalMin] = useState(String(stepsMin));
   const [localMax, setLocalMax] = useState(String(stepsMax));
   const prevMin = useRef(stepsMin);

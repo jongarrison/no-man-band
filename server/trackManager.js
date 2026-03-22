@@ -39,14 +39,17 @@ function getScaleNotes(key, mode) {
 }
 
 function transposeInputs(inputs, oldKey, oldMode, newKey, newMode) {
+  if (!inputs || !Array.isArray(inputs)) return inputs;
   const oldScale = getScaleNotes(oldKey, oldMode);
   const newScale = getScaleNotes(newKey, newMode);
-  return inputs.map((row) =>
-    row.map((note) => {
+  return inputs.map((row) => {
+    if (!Array.isArray(row)) return row;
+    return row.map((note) => {
       if (!note) return note;
       const degree = oldScale.indexOf(note);
-      if (degree !== -1) return newScale[degree];
+      if (degree !== -1 && degree < newScale.length) return newScale[degree];
       const noteIdx = ALL_NOTES.indexOf(note);
+      if (noteIdx === -1) return note;
       const rootIdx = ALL_NOTES.indexOf(oldKey);
       const semitones = (noteIdx - rootIdx + 12) % 12;
       const intervals = SCALES[oldMode] || SCALES.major;
@@ -59,9 +62,9 @@ function transposeInputs(inputs, oldKey, oldMode, newKey, newMode) {
           closest = d;
         }
       }
-      return newScale[closest];
-    }),
-  );
+      return closest < newScale.length ? newScale[closest] : note;
+    });
+  });
 }
 
 function randInt(min, max) {
@@ -149,7 +152,6 @@ function createDefaultConf() {
     velocityMin: 60,
     velocityMax: 120,
     release: 80,
-    manualMode: false,
   };
 }
 
@@ -321,14 +323,29 @@ class TrackManager extends EventEmitter {
     if (keyChanging || modeChanging) {
       const oldKey = track.conf.key;
       const oldMode = track.conf.mode;
-      const newKey = patch.key || track.conf.key;
-      const newMode = patch.mode || track.conf.mode;
+      const newKey = patch.key !== undefined ? patch.key : track.conf.key;
+      const newMode = patch.mode !== undefined ? patch.mode : track.conf.mode;
       track.conf.impromptuInputs = transposeInputs(
         track.conf.impromptuInputs,
         oldKey,
         oldMode,
         newKey,
         newMode,
+      );
+    }
+    if (patch.midiChannel !== undefined) {
+      patch.midiChannel = Math.max(
+        1,
+        Math.min(16, Number(patch.midiChannel) || 1),
+      );
+    }
+    if (patch.release !== undefined) {
+      patch.release = Math.max(10, Math.min(100, Number(patch.release) || 80));
+    }
+    if (patch.timeDivision !== undefined) {
+      patch.timeDivision = Math.max(
+        1,
+        Math.min(4, Number(patch.timeDivision) || 4),
       );
     }
     Object.assign(track.conf, patch);
@@ -364,7 +381,6 @@ class TrackManager extends EventEmitter {
   randomizeTrack(id) {
     const track = this.getTrack(id);
     if (!track) return;
-    if (track.conf.manualMode) return;
     const c = track.conf;
     const [lo, hi] = this._randomizeOctRange();
     c.octaveMin = lo;
@@ -384,7 +400,6 @@ class TrackManager extends EventEmitter {
 
   randomizeAll() {
     for (const track of this.tracks) {
-      if (track.conf.manualMode) continue;
       const c = track.conf;
       const [lo, hi] = this._randomizeOctRange();
       c.octaveMin = lo;
@@ -514,10 +529,12 @@ class TrackManager extends EventEmitter {
   }
 
   setBPM(bpm) {
+    bpm = Math.max(10, Math.min(300, Number(bpm) || 120));
     this.BPM = bpm;
     if (this._interval) {
-      this.stop();
-      this.start();
+      clearInterval(this._interval);
+      const beatMs = 1000 / (this.BPM / 60);
+      this._interval = setInterval(() => this._playCycle(), beatMs / 3);
     }
     this._emitState();
   }
@@ -558,7 +575,6 @@ class TrackManager extends EventEmitter {
   }
 
   _evolveTrack(track) {
-    if (track.conf.manualMode) return;
     const c = track.conf;
     const scaleNotes = getScaleNotes(c.key, c.mode);
     const pool = [...scaleNotes, ""];
