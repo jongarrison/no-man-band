@@ -102,58 +102,81 @@ export default function TrackControls({
           </button>
         </div>
 
-        <select
-          value={selectedPort}
-          onChange={(e) => {
-            const port = Number(e.target.value);
-            setSelectedPort(port);
-            if (connected) {
-              emit("connectPort", { trackId: id, portIndex: port });
-            }
-          }}
-          onClick={(e) => e.stopPropagation()}
-          style={selectStyle}
-        >
-          {ports.length === 0 && <option>No ports</option>}
-          {ports.map((p) => (
-            <option key={p.index} value={p.index}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-
-        <span
-          style={dotToggle(connected)}
+        <div
+          style={intExtToggle}
           onClick={(e) => {
             e.stopPropagation();
-            if (connected) {
+            const goingInt = !conf.internalAudio;
+            const patch = { internalAudio: goingInt };
+            emit("setTrackConf", { trackId: id, patch });
+            if (goingInt && connected) {
               emit("disconnectPort", { trackId: id });
-            } else {
-              emit("connectPort", { trackId: id, portIndex: selectedPort });
             }
           }}
-          title={connected ? "Disconnect" : "Connect"}
-        />
+        >
+          <span style={intExtBtn(!conf.internalAudio)}>Ext</span>
+          <span style={intExtBtn(conf.internalAudio)}>Int</span>
+        </div>
 
-        <label style={labelStyle} onClick={(e) => e.stopPropagation()}>
-          Ch
-          <select
-            value={conf.midiChannel}
-            onChange={(e) =>
-              emit("setTrackConf", {
-                trackId: id,
-                patch: { midiChannel: Number(e.target.value) },
-              })
-            }
-            style={{ ...selectStyle, maxWidth: 52, padding: "4px 6px" }}
-          >
-            {Array.from({ length: 16 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {i + 1}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!conf.internalAudio && (
+          <>
+            <select
+              value={selectedPort}
+              onChange={(e) => {
+                const port = Number(e.target.value);
+                setSelectedPort(port);
+                if (connected) {
+                  emit("connectPort", { trackId: id, portIndex: port });
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              style={selectStyle}
+            >
+              {ports.length === 0 && <option>No ports</option>}
+              {ports.map((p) => (
+                <option key={p.index} value={p.index}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+
+            <span
+              style={dotToggle(connected)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (connected) {
+                  emit("disconnectPort", { trackId: id });
+                } else {
+                  emit("connectPort", {
+                    trackId: id,
+                    portIndex: selectedPort,
+                  });
+                }
+              }}
+              title={connected ? "Disconnect" : "Connect"}
+            />
+
+            <label style={labelStyle} onClick={(e) => e.stopPropagation()}>
+              Ch
+              <select
+                value={conf.midiChannel}
+                onChange={(e) =>
+                  emit("setTrackConf", {
+                    trackId: id,
+                    patch: { midiChannel: Number(e.target.value) },
+                  })
+                }
+                style={{ ...selectStyle, maxWidth: 52, padding: "4px 6px" }}
+              >
+                {Array.from({ length: 16 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
 
         <div style={{ width: 1, height: 20, background: "var(--divider)" }} />
 
@@ -341,6 +364,25 @@ const dotToggle = (connected) => ({
   boxShadow: connected
     ? "var(--dot-connected-shadow)"
     : "var(--dot-disconnected-shadow)",
+});
+
+const intExtToggle = {
+  display: "inline-flex",
+  borderRadius: 5,
+  overflow: "hidden",
+  border: "1px solid rgba(255,255,255,0.15)",
+  flexShrink: 0,
+  cursor: "pointer",
+};
+
+const intExtBtn = (active) => ({
+  padding: "2px 7px",
+  fontSize: 9,
+  fontWeight: 600,
+  color: active ? "#fff" : "rgba(255,255,255,0.4)",
+  background: active ? "var(--toggle-active-bg)" : "transparent",
+  transition: "background 0.1s, color 0.1s",
+  letterSpacing: 0.3,
 });
 
 const labelStyle = {

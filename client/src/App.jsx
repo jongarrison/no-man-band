@@ -16,6 +16,7 @@ import Piano from "./components/Piano.jsx";
 import Visualizer from "./components/Visualizer.jsx";
 import GenerativeVisualizer from "./components/GenerativeVisualizer.jsx";
 import useMetronome from "./useMetronome.js";
+import useSynth from "./useSynth.js";
 import { getScaleNotes } from "./scaleUtils.js";
 import { trackRgb } from "./trackColor.js";
 
@@ -43,6 +44,10 @@ export default function App() {
   const metronome = useMetronome();
   const metronomeRef = useRef(metronome);
   metronomeRef.current = metronome;
+  const synth = useSynth();
+  const synthRef = useRef(synth);
+  synthRef.current = synth;
+  const stateRef = useRef(null);
   const [genUiVisible, setGenUiVisible] = useState(true);
   const genIdleTimer = useRef(null);
   const [manualListening, setManualListening] = useState(false);
@@ -61,6 +66,7 @@ export default function App() {
     socket.on("ports", setPorts);
     socket.on("state", (s) => {
       setState(s);
+      stateRef.current = s;
       metronomeRef.current.setEnabled(!!s.metronome);
       if (!s.playing && !s.paused) {
         setSeqPositions({});
@@ -82,6 +88,24 @@ export default function App() {
 
       if (data.seqPos != null) {
         setSeqPositions((prev) => ({ ...prev, [data.trackId]: data.seqPos }));
+      }
+
+      const s = stateRef.current;
+      if (s) {
+        const t = s.tracks.find((tr) => tr.id === data.trackId);
+        if (t && t.conf.internalAudio) {
+          synthRef.current.playNote(
+            data.note,
+            data.velocity || 100,
+            data.durationMs || 200,
+            t.conf.synthLpf ?? 100,
+            t.conf.synthRes ?? 0,
+            t.conf.synthAttack ?? 1,
+            t.conf.synthDecay ?? 10,
+            t.conf.synthSustain ?? 80,
+            t.conf.synthRelease ?? 15,
+          );
+        }
       }
 
       if (visualizerNoteRef.current) {
@@ -366,6 +390,22 @@ export default function App() {
                     octaveEnd={pianoOctEnd}
                     pianoKeyRef={pianoKeyRef}
                     onListeningChange={setManualListening}
+                    onPreviewNote={
+                      selectedTrack.conf.internalAudio
+                        ? (midi) =>
+                            synth.playNote(
+                              midi,
+                              80,
+                              250,
+                              selectedTrack.conf.synthLpf ?? 100,
+                              selectedTrack.conf.synthRes ?? 0,
+                              selectedTrack.conf.synthAttack ?? 1,
+                              selectedTrack.conf.synthDecay ?? 10,
+                              selectedTrack.conf.synthSustain ?? 80,
+                              selectedTrack.conf.synthRelease ?? 15,
+                            )
+                        : null
+                    }
                   />
                 )}
               </>

@@ -152,6 +152,13 @@ function createDefaultConf() {
     velocityMin: 60,
     velocityMax: 120,
     release: 80,
+    internalAudio: false,
+    synthLpf: 100,
+    synthRes: 0,
+    synthAttack: 1,
+    synthDecay: 10,
+    synthSustain: 80,
+    synthRelease: 15,
   };
 }
 
@@ -193,11 +200,12 @@ class Track {
 
     const beatMs = 1000 / (bpm / 60);
     const gate = Math.max(0.1, Math.min(1, (this.conf.release || 80) / 100));
+    const durationMs = beatMs * gate;
     setTimeout(() => {
       this.output.sendMessage([noteOff, noteNumber, 0]);
-    }, beatMs * gate);
+    }, durationMs);
 
-    return { trackId: this.id, note: noteNumber, velocity };
+    return { trackId: this.id, note: noteNumber, velocity, durationMs };
   }
 
   playCycle(bpm, genVelocity, genVelocitySpread) {
@@ -348,6 +356,9 @@ class TrackManager extends EventEmitter {
         Math.min(4, Number(patch.timeDivision) || 4),
       );
     }
+    if (patch.internalAudio === true && track.output.isConnected()) {
+      track.output.disconnect();
+    }
     Object.assign(track.conf, patch);
     const octRangeChanged =
       patch.octaveMin !== undefined || patch.octaveMax !== undefined;
@@ -450,6 +461,7 @@ class TrackManager extends EventEmitter {
   connectPort(trackId, portIndex) {
     const track = this.getTrack(trackId);
     if (!track) return { ok: false, error: "track not found" };
+    track.conf.internalAudio = false;
     return track.output.connect(portIndex);
   }
 

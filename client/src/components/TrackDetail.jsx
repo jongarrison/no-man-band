@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { Knob } from "primereact/knob";
 import { trackCss, trackRgb } from "../trackColor.js";
 import { ALL_NOTES, MODES, displayNote, getScaleNotes } from "../scaleUtils.js";
 
@@ -144,6 +145,7 @@ export default function TrackDetail({
   globalKeyMode = false,
   pianoKeyRef = null,
   onListeningChange = null,
+  onPreviewNote = null,
 }) {
   const { id, conf } = track;
   const [flashing, setFlashing] = useState(false);
@@ -232,6 +234,7 @@ export default function TrackDetail({
     ({ note, octave, midi }) => {
       if (!listening) return;
       emit("previewNote", { trackId: id, midi });
+      if (onPreviewNote) onPreviewNote(midi);
       if (reassignIdx !== null) {
         setManualNotes((prev) => {
           const copy = [...prev];
@@ -243,7 +246,7 @@ export default function TrackDetail({
         setManualNotes((prev) => [...prev, { note, octave }]);
       }
     },
-    [listening, reassignIdx, emit, id],
+    [listening, reassignIdx, emit, id, onPreviewNote],
   );
 
   useEffect(() => {
@@ -305,9 +308,13 @@ export default function TrackDetail({
             style={{
               ...title,
               background: trackCss(id),
-              padding: "3px 10px",
+              padding: "0 8px",
               borderRadius: 4,
               color: "#fff",
+              height: 22,
+              display: "inline-flex",
+              alignItems: "center",
+              boxSizing: "border-box",
             }}
           >
             Track {id}
@@ -477,6 +484,33 @@ export default function TrackDetail({
         </div>
       </div>
 
+      {conf.internalAudio && (
+        <div style={adsrRow}>
+          {[
+            { key: "synthLpf", label: "LPF", def: 100, color: "#e06c75" },
+            { key: "synthRes", label: "Res", def: 0, color: "#e5c07b" },
+            { key: "synthAttack", label: "A", def: 1, color: "#5bcefa" },
+            { key: "synthDecay", label: "D", def: 10, color: "#f5a623" },
+            { key: "synthSustain", label: "S", def: 80, color: "#7ed957" },
+            { key: "synthRelease", label: "R", def: 15, color: "#c084fc" },
+          ].map(({ key, label, def, color }) => (
+            <div key={key} style={adsrKnobWrap}>
+              <Knob
+                value={conf[key] ?? def}
+                onChange={(e) => patch({ [key]: e.value })}
+                size={40}
+                strokeWidth={6}
+                valueColor={color}
+                rangeColor="rgba(255,255,255,0.1)"
+                textColor="rgba(255,255,255,0.65)"
+                valueTemplate={"{value}"}
+              />
+              <span style={adsrLabel}>{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={sequenceDisplay} translate="no">
         {listening
           ? manualNotes.map(({ note, octave }, i) => {
@@ -613,7 +647,7 @@ const headerRow = {
 };
 
 const title = {
-  fontSize: 13,
+  fontSize: 11,
   fontWeight: 600,
   color: "var(--title-text-color)",
 };
@@ -721,26 +755,30 @@ const velToggle = {
 };
 
 const setBtn = {
-  padding: "2px 10px",
+  padding: "0 8px",
   border: "none",
   borderRadius: 4,
   color: "var(--btn-color)",
   cursor: "pointer",
   fontSize: 10,
   fontWeight: 600,
-  marginLeft: 8,
+  marginLeft: 6,
+  height: 22,
+  boxSizing: "border-box",
 };
 
 const confirmBtn = {
-  padding: "3px 10px",
+  padding: "0 8px",
   border: "none",
   borderRadius: 4,
   background: "var(--btn-bg)",
   color: "var(--btn-color)",
   cursor: "pointer",
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 600,
-  marginLeft: 4,
+  marginLeft: 3,
+  height: 22,
+  boxSizing: "border-box",
 };
 
 const randomizeBtn = {
@@ -762,4 +800,25 @@ const selectStyle = {
   color: "var(--select-color)",
   fontSize: 12,
   cursor: "pointer",
+};
+
+const adsrRow = {
+  display: "flex",
+  alignItems: "center",
+  gap: 16,
+  padding: "4px 0 8px",
+};
+
+const adsrKnobWrap = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 2,
+};
+
+const adsrLabel = {
+  fontSize: 10,
+  color: "rgba(255,255,255,0.6)",
+  textAlign: "center",
+  letterSpacing: 0.5,
 };
