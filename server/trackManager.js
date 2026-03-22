@@ -527,10 +527,18 @@ class TrackManager extends EventEmitter {
   setGenerativeMode(enabled) {
     this.generativeMode = !!enabled;
     if (this.generativeMode) {
+      this._savedConfs = new Map();
       for (const track of this.tracks) {
+        this._savedConfs.set(track.id, JSON.parse(JSON.stringify(track.conf)));
         track._genRhythm = this._generateRhythm();
       }
       if (!this.isPlaying()) this.start();
+    } else if (this._savedConfs) {
+      for (const track of this.tracks) {
+        const saved = this._savedConfs.get(track.id);
+        if (saved) track.conf = saved;
+      }
+      this._savedConfs = null;
     }
     this._emitState();
   }

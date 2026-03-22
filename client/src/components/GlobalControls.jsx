@@ -168,7 +168,7 @@ export default function GlobalControls({
           BPM {BPM}
           <input
             type="range"
-            min={60}
+            min={30}
             max={300}
             value={BPM}
             onChange={(e) => emit("setConf", { BPM: Number(e.target.value) })}

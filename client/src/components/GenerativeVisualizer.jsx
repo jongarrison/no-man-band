@@ -136,16 +136,16 @@ export default function GenerativeVisualizer({ tracks, onNoteRef, theme }) {
           const centerY = bandH * i + bandH / 2;
           ps.yOffset = centerY;
 
-          ps.energy *= 0.92;
+          ps.energy *= 0.94;
           if (ps.energy < 0.005) ps.energy = 0;
 
-          const idleAmp = 2;
-          const amp = idleAmp + ps.energy * bandH * 0.4;
+          const idleAmp = 5;
+          const amp = idleAmp + ps.energy * bandH * 0.65;
           const [r, g, b] = ps.rgb;
-          const baseAlpha = 30 + ps.energy * 225;
+          const baseAlpha = 50 + ps.energy * 205;
 
           waveGfx.noFill();
-          waveGfx.strokeWeight(1.5 + ps.energy * 3);
+          waveGfx.strokeWeight(2 + ps.energy * 5);
           waveGfx.stroke(r, g, b, baseAlpha);
           waveGfx.beginShape();
           for (let x = 0; x <= p.width; x += 4) {
@@ -162,8 +162,8 @@ export default function GenerativeVisualizer({ tracks, onNoteRef, theme }) {
           waveGfx.endShape();
 
           if (ps.energy > 0.05) {
-            waveGfx.strokeWeight(8 + ps.energy * 6);
-            waveGfx.stroke(r, g, b, ps.energy * 35);
+            waveGfx.strokeWeight(10 + ps.energy * 10);
+            waveGfx.stroke(r, g, b, ps.energy * 60);
             waveGfx.beginShape();
             for (let x = 0; x <= p.width; x += 8) {
               const nx = x / p.width;
@@ -178,8 +178,8 @@ export default function GenerativeVisualizer({ tracks, onNoteRef, theme }) {
             }
             waveGfx.endShape();
 
-            waveGfx.strokeWeight(1);
-            waveGfx.stroke(r, g, b, ps.energy * 80);
+            waveGfx.strokeWeight(1.5);
+            waveGfx.stroke(r, g, b, ps.energy * 120);
             waveGfx.beginShape();
             for (let x = 0; x <= p.width; x += 4) {
               const nx = x / p.width;

@@ -197,7 +197,7 @@ export default function App() {
                 BPM {state.BPM}
                 <input
                   type="range"
-                  min={60}
+                  min={30}
                   max={300}
                   value={state.BPM}
                   onChange={(e) =>
