@@ -21,15 +21,33 @@ function hslToRgb(h, s, l) {
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
+const RETRO_HUES = [320, 190, 270, 45, 160, 340, 220, 290, 30, 180];
+
+let cfg = { hues: null, s: 0.7, l: 0.6 };
+
+export function setTrackColorConfig({ hues, saturation, lightness }) {
+  if (hues !== undefined) cfg.hues = hues;
+  if (saturation !== undefined) cfg.s = saturation;
+  if (lightness !== undefined) cfg.l = lightness;
+}
+
+export const THEME_TRACK_COLORS = {
+  clean: { hues: null, saturation: 0.7, lightness: 0.6 },
+  retro: { hues: RETRO_HUES, saturation: 0.85, lightness: 0.6 },
+};
+
 export function trackHue(trackId) {
+  if (cfg.hues) {
+    return cfg.hues[((trackId || 1) - 1) % cfg.hues.length];
+  }
   return ((trackId || 1) * 137) % 360;
 }
 
-export function trackRgb(trackId, s = 0.7, l = 0.6) {
-  return hslToRgb(trackHue(trackId) / 360, s, l);
+export function trackRgb(trackId, s, l) {
+  return hslToRgb(trackHue(trackId) / 360, s ?? cfg.s, l ?? cfg.l);
 }
 
-export function trackCss(trackId, s = 0.7, l = 0.6) {
+export function trackCss(trackId, s, l) {
   const [r, g, b] = trackRgb(trackId, s, l);
   return `rgb(${r},${g},${b})`;
 }

@@ -1,8 +1,122 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { trackCss } from "../trackColor.js";
 
-const NOTE_OPTIONS = [
-  "",
+function DualRangeSlider({ min, max, low, high, onChange }) {
+  const trackRef = useRef(null);
+  const [lowOnTop, setLowOnTop] = useState(false);
+  const pctLow = ((low - min) / (max - min)) * 100;
+  const pctHigh = ((high - min) / (max - min)) * 100;
+
+  const handlePointerDown = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    const clickVal = min + pct * (max - min);
+    setLowOnTop(clickVal <= (low + high) / 2);
+  };
+
+  return (
+    <div style={sliderWrap} onPointerDown={handlePointerDown}>
+      <div ref={trackRef} style={sliderTrack}>
+        <div
+          style={{
+            ...sliderFill,
+            left: `${pctLow}%`,
+            width: `${pctHigh - pctLow}%`,
+          }}
+        />
+      </div>
+      <input
+        type="range"
+        className="dual-range"
+        min={min}
+        max={max}
+        step={1}
+        value={low}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          onChange(Math.min(v, high), high);
+        }}
+        style={{ ...sliderInput, zIndex: lowOnTop ? 3 : 2 }}
+      />
+      <input
+        type="range"
+        className="dual-range"
+        min={min}
+        max={max}
+        step={1}
+        value={high}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          onChange(low, Math.max(v, low));
+        }}
+        style={{ ...sliderInput, zIndex: lowOnTop ? 2 : 3 }}
+      />
+      <div style={sliderTicks}>
+        {Array.from({ length: max - min + 1 }, (_, i) => (
+          <span key={i} style={sliderTickLabel}>
+            {min + i}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const sliderWrap = {
+  position: "relative",
+  width: 100,
+  height: 32,
+  marginTop: 2,
+};
+
+const sliderTrack = {
+  position: "absolute",
+  top: 8,
+  left: 0,
+  right: 0,
+  height: 4,
+  borderRadius: 2,
+  background: "rgba(255,255,255,0.12)",
+};
+
+const sliderFill = {
+  position: "absolute",
+  top: 0,
+  height: "100%",
+  borderRadius: 2,
+  background: "var(--slider-fill)",
+};
+
+const sliderInput = {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: 20,
+  margin: 0,
+  padding: 0,
+  appearance: "none",
+  WebkitAppearance: "none",
+  background: "transparent",
+  pointerEvents: "none",
+  zIndex: 2,
+};
+
+const sliderTicks = {
+  position: "absolute",
+  top: 20,
+  left: 0,
+  right: 0,
+  display: "flex",
+  justifyContent: "space-between",
+  fontSize: 8,
+  color: "rgba(255,255,255,0.35)",
+  pointerEvents: "none",
+};
+
+const sliderTickLabel = { textAlign: "center", width: 10 };
+
+const ALL_NOTES = [
   "C",
   "Cs",
   "D",
@@ -16,36 +130,23 @@ const NOTE_OPTIONS = [
   "As",
   "B",
 ];
+const MODES = [
+  "major",
+  "minor",
+  "dorian",
+  "phrygian",
+  "lydian",
+  "mixolydian",
+  "locrian",
+  "harm minor",
+  "mel minor",
+  "maj pent",
+  "min pent",
+  "blues",
+  "chromatic",
+];
 
-const SCALE_NOTES = ["C", "D", "E", "F", "G", "A", "As", "B"];
-
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function generateSequence() {
-  const pool = [...SCALE_NOTES, ""];
-  const numRows = randInt(2, 4);
-  const inputs = [];
-  for (let r = 0; r < numRows; r++) {
-    const len = randInt(3, 6);
-    const row = [];
-    for (let c = 0; c < len; c++) {
-      row.push(pick(pool));
-    }
-    inputs.push(row);
-  }
-  const cycleLen = randInt(3, 6);
-  const cycle = [];
-  for (let i = 0; i < cycleLen; i++) {
-    cycle.push(randInt(0, numRows - 1));
-  }
-  return { impromptuInputs: inputs, impromptuInputsCycle: cycle };
-}
+const NOTE_OPTIONS = ["", ...ALL_NOTES];
 
 const SHOW_MANUAL_EDITOR = false;
 
@@ -56,15 +157,26 @@ function displayNote(n) {
   return n;
 }
 
-function flattenSequence(inputs, cycle) {
+function flattenSequence(inputs, cycle, octaves) {
   let result = [];
   for (const idx of cycle) {
     if (inputs[idx]) result = result.concat(inputs[idx]);
   }
-  return result.map((n) => ({ raw: n, display: displayNote(n) }));
+  return result.map((n, i) => ({
+    raw: n,
+    display: displayNote(n),
+    octave: octaves?.[i],
+  }));
 }
 
-export default function TrackDetail({ track, emit, seqPos }) {
+export default function TrackDetail({
+  track,
+  emit,
+  seqPos,
+  octaveStart = 2,
+  octaveEnd = 5,
+  globalKeyMode = false,
+}) {
   const { id, conf } = track;
   const [flashing, setFlashing] = useState(false);
   const flashTimer = useRef(null);
@@ -74,7 +186,7 @@ export default function TrackDetail({ track, emit, seqPos }) {
   };
 
   const randomize = () => {
-    patch(generateSequence());
+    emit("randomize", { trackId: id });
     setFlashing(true);
     clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlashing(false), 200);
@@ -116,44 +228,101 @@ export default function TrackDetail({ track, emit, seqPos }) {
     }
   };
 
-  const flat = flattenSequence(conf.impromptuInputs, conf.impromptuInputsCycle);
+  const flat = flattenSequence(
+    conf.impromptuInputs,
+    conf.impromptuInputsCycle,
+    conf.impromptuOctaves,
+  );
 
   return (
     <div style={wrapper}>
       <div style={headerRow}>
-        <span style={title}>Track {id}</span>
+        <span
+          style={{
+            ...title,
+            background: trackCss(id),
+            padding: "3px 10px",
+            borderRadius: 4,
+            color: "#fff",
+          }}
+        >
+          Track {id}
+        </span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {!globalKeyMode && (
+            <>
+              <label style={labelStyle} translate="no">
+                Key
+                <select
+                  value={conf.key}
+                  onChange={(e) => patch({ key: e.target.value })}
+                  style={selectStyle}
+                >
+                  {ALL_NOTES.map((n) => (
+                    <option key={n} value={n}>
+                      {displayNote(n)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={labelStyle}>
+                <select
+                  value={conf.mode}
+                  onChange={(e) => patch({ mode: e.target.value })}
+                  style={selectStyle}
+                >
+                  {MODES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+          <label style={labelStyle}>
+            Oct {conf.octaveMin ?? octaveStart}–{conf.octaveMax ?? octaveEnd}
+            <DualRangeSlider
+              min={octaveStart}
+              max={octaveEnd}
+              low={conf.octaveMin ?? octaveStart}
+              high={conf.octaveMax ?? octaveEnd}
+              onChange={(lo, hi) => patch({ octaveMin: lo, octaveMax: hi })}
+            />
+          </label>
+          <label style={labelStyle}>
+            Steps
+            <input
+              type="number"
+              min={1}
+              max={64}
+              value={flat.length}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 1 && v <= 64) {
+                  emit("setTrackSteps", { trackId: id, steps: v });
+                }
+              }}
+              style={{ ...selectStyle, width: 50, textAlign: "center" }}
+            />
+          </label>
           <button
             style={{
               ...randomizeBtn,
-              background: flashing ? "#6a6aaa" : "#3a3a6a",
+              background: flashing
+                ? "var(--randomize-flash)"
+                : "var(--randomize-bg)",
               transition: "background 0.15s",
             }}
             onClick={randomize}
           >
             Randomize
           </button>
-          <label style={labelStyle}>
-            Octave
-            <select
-              value={conf.impromptuOctave}
-              onChange={(e) =>
-                patch({ impromptuOctave: Number(e.target.value) })
-              }
-              style={selectStyle}
-            >
-              {[1, 2, 3, 4, 5, 6, 7].map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
       </div>
 
       <div style={sequenceDisplay} translate="no">
-        {flat.map(({ raw, display }, i) => {
+        {flat.map(({ raw, display, octave }, i) => {
           const active = seqPos != null && i === seqPos;
           const isRest = !raw;
           const base = isRest ? noteRest : noteChip;
@@ -168,6 +337,9 @@ export default function TrackDetail({ track, emit, seqPos }) {
           return (
             <span key={i} style={style}>
               {display}
+              {!isRest && octave != null && (
+                <span style={octLabel}>{octave}</span>
+              )}
             </span>
           );
         })}
@@ -241,7 +413,7 @@ export default function TrackDetail({ track, emit, seqPos }) {
 
 const wrapper = {
   padding: "12px 16px",
-  borderTop: "1px solid rgba(255,255,255,0.06)",
+  borderTop: "1px solid var(--border-subtle)",
 };
 
 const headerRow = {
@@ -254,7 +426,7 @@ const headerRow = {
 const title = {
   fontSize: 13,
   fontWeight: 600,
-  color: "#ccc",
+  color: "var(--title-text-color)",
 };
 
 const sectionStyle = {
@@ -263,7 +435,7 @@ const sectionStyle = {
 
 const sectionLabel = {
   fontSize: 11,
-  color: "#777",
+  color: "var(--section-label-color)",
   display: "block",
   marginBottom: 4,
   textTransform: "uppercase",
@@ -280,7 +452,7 @@ const rowStyle = {
 
 const rowLabel = {
   fontSize: 11,
-  color: "#666",
+  color: "var(--row-label-color)",
   width: 16,
   textAlign: "right",
   flexShrink: 0,
@@ -290,8 +462,8 @@ const noteSelect = {
   padding: "3px 4px",
   border: "none",
   borderRadius: 4,
-  background: "#2a2a4a",
-  color: "#e0e0e0",
+  background: "var(--select-bg)",
+  color: "var(--select-color)",
   fontSize: 12,
   cursor: "pointer",
   width: 48,
@@ -302,8 +474,8 @@ const smallBtn = {
   padding: "2px 8px",
   border: "none",
   borderRadius: 4,
-  background: "#1a1a3a",
-  color: "#888",
+  background: "var(--small-btn-bg)",
+  color: "var(--small-btn-color)",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 600,
@@ -315,7 +487,7 @@ const labelStyle = {
   alignItems: "center",
   gap: 6,
   fontSize: 12,
-  color: "#aaa",
+  color: "var(--label-color)",
 };
 
 const sequenceDisplay = {
@@ -329,24 +501,32 @@ const sequenceDisplay = {
 const noteChip = {
   padding: "2px 6px",
   borderRadius: 3,
-  background: "rgba(255,255,255,0.08)",
-  color: "#ccc",
+  background: "var(--note-chip-bg)",
+  color: "var(--note-chip-color)",
   fontSize: 11,
   fontFamily: "monospace",
   letterSpacing: 0.5,
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: 1,
+};
+
+const octLabel = {
+  fontSize: 8,
+  opacity: 0.5,
 };
 
 const noteRest = {
   ...noteChip,
-  color: "#555",
+  color: "var(--note-rest-color)",
 };
 
 const randomizeBtn = {
   padding: "5px 14px",
   border: "none",
   borderRadius: 5,
-  background: "#3a3a6a",
-  color: "#e0e0e0",
+  background: "var(--randomize-bg)",
+  color: "var(--btn-color)",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -356,8 +536,8 @@ const selectStyle = {
   padding: "4px 6px",
   border: "none",
   borderRadius: 5,
-  background: "#2a2a4a",
-  color: "#e0e0e0",
+  background: "var(--select-bg)",
+  color: "var(--select-color)",
   fontSize: 12,
   cursor: "pointer",
 };

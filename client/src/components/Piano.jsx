@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { useTheme } from "../ThemeContext.jsx";
 import { trackRgb } from "../trackColor.js";
 
-const OCTAVE_START = 2;
-const OCTAVE_END = 5;
+const PIANO_COLORS = {
+  clean: { white: "#f0f0f0", black: "#1a1a2e" },
+  retro: { white: "#e0d0f0", black: "#0a0518" },
+};
+
 const NOTE_NAMES = [
   "C",
   "Cs",
@@ -19,9 +23,9 @@ const NOTE_NAMES = [
 ];
 const BLACK_INDICES = new Set([1, 3, 6, 8, 10]);
 
-function buildKeys() {
+function buildKeys(octStart, octEnd) {
   const keys = [];
-  for (let oct = OCTAVE_START; oct <= OCTAVE_END; oct++) {
+  for (let oct = octStart; oct <= octEnd; oct++) {
     for (let i = 0; i < 12; i++) {
       keys.push({
         name: NOTE_NAMES[i],
@@ -34,15 +38,24 @@ function buildKeys() {
   return keys;
 }
 
-const ALL_KEYS = buildKeys();
-const WHITE_KEYS = ALL_KEYS.filter((k) => !k.isBlack);
-const BLACK_KEYS = ALL_KEYS.filter((k) => k.isBlack);
+export default function Piano({
+  width,
+  height,
+  activeNotes = [],
+  octaveStart = 2,
+  octaveEnd = 5,
+}) {
+  const theme = useTheme();
+  const { white: WHITE_COLOR, black: BLACK_COLOR } =
+    PIANO_COLORS[theme] || PIANO_COLORS.clean;
+  const allKeys = useMemo(
+    () => buildKeys(octaveStart, octaveEnd),
+    [octaveStart, octaveEnd],
+  );
+  const whiteKeys = useMemo(() => allKeys.filter((k) => !k.isBlack), [allKeys]);
+  const blackKeys = useMemo(() => allKeys.filter((k) => k.isBlack), [allKeys]);
 
-const WHITE_COLOR = "#f0f0f0";
-const BLACK_COLOR = "#1a1a2e";
-
-export default function Piano({ width, height, activeNotes = [] }) {
-  const whiteW = width / WHITE_KEYS.length;
+  const whiteW = width / whiteKeys.length;
   const blackW = whiteW * 0.6;
   const blackH = height * 0.6;
 
@@ -75,7 +88,7 @@ export default function Piano({ width, height, activeNotes = [] }) {
 
   const blackXFor = (key) => {
     let whiteIdx = 0;
-    for (const k of ALL_KEYS) {
+    for (const k of allKeys) {
       if (k.midi === key.midi) break;
       if (!k.isBlack) whiteIdx++;
     }
@@ -89,7 +102,7 @@ export default function Piano({ width, height, activeNotes = [] }) {
       viewBox={`0 0 ${width} ${height}`}
       style={{ display: "block", flexShrink: 0 }}
     >
-      {WHITE_KEYS.map((key, i) => (
+      {whiteKeys.map((key, i) => (
         <rect
           key={key.midi}
           x={i * whiteW}
@@ -101,7 +114,7 @@ export default function Piano({ width, height, activeNotes = [] }) {
           style={{ transition: "fill 0.08s" }}
         />
       ))}
-      {BLACK_KEYS.map((key) => (
+      {blackKeys.map((key) => (
         <rect
           key={key.midi}
           x={blackXFor(key)}
