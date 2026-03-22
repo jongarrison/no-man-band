@@ -148,6 +148,7 @@ function createDefaultConf() {
     velocityOn: false,
     velocityMin: 60,
     velocityMax: 120,
+    release: 80,
   };
 }
 
@@ -188,9 +189,10 @@ class Track {
     this.output.sendMessage([noteOn, noteNumber, velocity]);
 
     const beatMs = 1000 / (bpm / 60);
+    const gate = Math.max(0.1, Math.min(1, (this.conf.release || 80) / 100));
     setTimeout(() => {
       this.output.sendMessage([noteOff, noteNumber, 0]);
-    }, beatMs * 0.8);
+    }, beatMs * gate);
 
     return { trackId: this.id, note: noteNumber, velocity };
   }
@@ -374,6 +376,7 @@ class TrackManager extends EventEmitter {
     const vLo = randInt(30, 100);
     c.velocityMin = vLo;
     c.velocityMax = randInt(vLo, 127);
+    c.release = randInt(20, 100);
     this._emitState();
   }
 
@@ -392,6 +395,7 @@ class TrackManager extends EventEmitter {
       const vLo = randInt(30, 100);
       c.velocityMin = vLo;
       c.velocityMax = randInt(vLo, 127);
+      c.release = randInt(20, 100);
     }
     this._emitState();
   }
@@ -559,6 +563,9 @@ class TrackManager extends EventEmitter {
     }
     if (Math.random() < 0.25) {
       c.timeDivision = randInt(1, 4);
+    }
+    if (Math.random() < 0.3) {
+      c.release = randInt(20, 100);
     }
 
     if (Math.random() < 0.3) {

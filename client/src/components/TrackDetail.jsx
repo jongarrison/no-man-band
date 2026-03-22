@@ -342,6 +342,17 @@ export default function TrackDetail({
               </>
             )}
           </label>
+          <label style={{ ...labelStyle, gap: 4 }}>
+            Rel {conf.release ?? 80}%
+            <input
+              type="range"
+              min={10}
+              max={100}
+              value={conf.release ?? 80}
+              onChange={(e) => patch({ release: Number(e.target.value) })}
+              style={{ width: 60, cursor: "pointer" }}
+            />
+          </label>
           <button
             style={{
               ...randomizeBtn,
@@ -349,10 +360,23 @@ export default function TrackDetail({
                 ? "var(--randomize-flash)"
                 : "var(--randomize-bg)",
               transition: "background 0.15s",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0,
             }}
             onClick={randomize}
+            title="Randomize track"
           >
-            Randomize
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              style={{ verticalAlign: "middle" }}
+            >
+              <path d="M12 2a10 10 0 0 1 7.07 2.93l1.5-1.5A.75.75 0 0 1 22 4v5a1 1 0 0 1-1 1h-5a.75.75 0 0 1-.53-1.28l1.7-1.7A7.5 7.5 0 0 0 4.5 12H2A10 10 0 0 1 12 2z" />
+              <path d="M12 22a10 10 0 0 1-7.07-2.93l-1.5 1.5A.75.75 0 0 1 2 20v-5a1 1 0 0 1 1-1h5a.75.75 0 0 1 .53 1.28l-1.7 1.7A7.5 7.5 0 0 0 19.5 12H22A10 10 0 0 1 12 22z" />
+            </svg>
           </button>
         </div>
       </div>

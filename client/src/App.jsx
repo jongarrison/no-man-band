@@ -11,7 +11,7 @@ import Visualizer from "./components/Visualizer.jsx";
 import GenerativeVisualizer from "./components/GenerativeVisualizer.jsx";
 import useMetronome from "./useMetronome.js";
 
-const CONTAINER_WIDTH = 860;
+const CONTAINER_WIDTH = 1032;
 const DEFAULT_OCTAVE_START = 2;
 const DEFAULT_OCTAVE_END = 5;
 
