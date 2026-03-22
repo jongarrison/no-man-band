@@ -10,6 +10,8 @@ import Piano from "./components/Piano.jsx";
 import Visualizer from "./components/Visualizer.jsx";
 import GenerativeVisualizer from "./components/GenerativeVisualizer.jsx";
 import useMetronome from "./useMetronome.js";
+import { getScaleNotes } from "./scaleUtils.js";
+import { trackRgb } from "./trackColor.js";
 
 const CONTAINER_WIDTH = 1032;
 const DEFAULT_OCTAVE_START = 2;
@@ -35,6 +37,8 @@ export default function App() {
   const metronome = useMetronome();
   const [genUiVisible, setGenUiVisible] = useState(true);
   const genIdleTimer = useRef(null);
+  const [manualListening, setManualListening] = useState(false);
+  const pianoKeyRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -109,6 +113,11 @@ export default function App() {
 
   const selectedTrack = state?.tracks.find((t) => t.id === selectedTrackId);
   const generativeMode = state?.generativeMode;
+
+  useEffect(() => {
+    setManualListening(false);
+    pianoKeyRef.current = null;
+  }, [selectedTrackId]);
 
   useEffect(() => {
     if (!generativeMode) {
@@ -328,6 +337,8 @@ export default function App() {
                     globalKeyMode={state.globalKeyMode}
                     octaveStart={pianoOctStart}
                     octaveEnd={pianoOctEnd}
+                    pianoKeyRef={pianoKeyRef}
+                    onListeningChange={setManualListening}
                   />
                 )}
               </>
@@ -335,9 +346,26 @@ export default function App() {
             <Piano
               width={CONTAINER_WIDTH}
               height={100}
-              activeNotes={activeNotes}
+              activeNotes={manualListening ? [] : activeNotes}
               octaveStart={pianoOctStart}
               octaveEnd={pianoOctEnd}
+              listening={manualListening}
+              scaleHighlight={
+                manualListening && selectedTrack
+                  ? getScaleNotes(
+                      selectedTrack.conf.key,
+                      selectedTrack.conf.mode,
+                    )
+                  : null
+              }
+              highlightColor={
+                manualListening && selectedTrack
+                  ? trackRgb(selectedTrack.id)
+                  : null
+              }
+              onKeyClick={
+                manualListening ? (data) => pianoKeyRef.current?.(data) : null
+              }
             />
           </div>
         )}

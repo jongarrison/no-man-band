@@ -149,6 +149,7 @@ function createDefaultConf() {
     velocityMin: 60,
     velocityMax: 120,
     release: 80,
+    manualMode: false,
   };
 }
 
@@ -363,6 +364,7 @@ class TrackManager extends EventEmitter {
   randomizeTrack(id) {
     const track = this.getTrack(id);
     if (!track) return;
+    if (track.conf.manualMode) return;
     const c = track.conf;
     const [lo, hi] = this._randomizeOctRange();
     c.octaveMin = lo;
@@ -382,6 +384,7 @@ class TrackManager extends EventEmitter {
 
   randomizeAll() {
     for (const track of this.tracks) {
+      if (track.conf.manualMode) continue;
       const c = track.conf;
       const [lo, hi] = this._randomizeOctRange();
       c.octaveMin = lo;
@@ -555,6 +558,7 @@ class TrackManager extends EventEmitter {
   }
 
   _evolveTrack(track) {
+    if (track.conf.manualMode) return;
     const c = track.conf;
     const scaleNotes = getScaleNotes(c.key, c.mode);
     const pool = [...scaleNotes, ""];

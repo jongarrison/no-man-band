@@ -356,6 +356,13 @@ io.on("connection", (socket) => {
   socket.on("pauseTrack", ({ trackId }) => tm.pauseTrack(trackId));
   socket.on("stopTrack", ({ trackId }) => tm.stopTrack(trackId));
 
+  socket.on("previewNote", ({ trackId, midi }) => {
+    const track = tm.getTrack(trackId);
+    if (track && track.output.isConnected()) {
+      track.sendNote(midi, tm.BPM, 100);
+    }
+  });
+
   socket.on("eval", (code) => {
     try {
       const result = vm.runInContext(code, evalContext, { timeout: 200 });

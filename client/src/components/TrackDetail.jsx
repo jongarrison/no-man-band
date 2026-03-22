@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
-import { trackCss } from "../trackColor.js";
+import { trackCss, trackRgb } from "../trackColor.js";
+import { getScaleNotes } from "../scaleUtils.js";
 
 function DualRangeSlider({ min, max, low, high, onChange, showTicks = true }) {
   const trackRef = useRef(null);
@@ -178,10 +179,15 @@ export default function TrackDetail({
   octaveStart = 2,
   octaveEnd = 5,
   globalKeyMode = false,
+  pianoKeyRef = null,
+  onListeningChange = null,
 }) {
   const { id, conf } = track;
   const [flashing, setFlashing] = useState(false);
   const flashTimer = useRef(null);
+  const [listening, setListening] = useState(false);
+  const [manualNotes, setManualNotes] = useState([]);
+  const [reassignIdx, setReassignIdx] = useState(null);
 
   const patch = (update) => {
     emit("setTrackConf", { trackId: id, patch: update });
@@ -193,6 +199,89 @@ export default function TrackDetail({
     clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlashing(false), 200);
   };
+
+  const setListeningAndNotify = (val) => {
+    setListening(val);
+    if (onListeningChange) onListeningChange(val);
+  };
+
+  const toggleSet = () => {
+    if (listening) {
+      setListeningAndNotify(false);
+      setManualNotes([]);
+      setReassignIdx(null);
+    } else {
+      const existing = flat.map((s) => ({
+        note: s.raw || "",
+        octave: s.octave ?? null,
+      }));
+      setManualNotes(existing);
+      setReassignIdx(null);
+      setListeningAndNotify(true);
+    }
+  };
+
+  const clearManual = () => {
+    setManualNotes([]);
+    setReassignIdx(null);
+  };
+
+  const confirmManual = () => {
+    if (manualNotes.length === 0) return;
+    const notes = manualNotes.map((n) => n.note);
+    const octaves = manualNotes.map((n) => n.octave);
+    patch({
+      impromptuInputs: [notes],
+      impromptuInputsCycle: [0],
+      impromptuOctaves: octaves,
+      steps: notes.length,
+    });
+    setListeningAndNotify(false);
+    setManualNotes([]);
+    setReassignIdx(null);
+  };
+
+  const undoManual = () => {
+    if (manualNotes.length > 0) {
+      setManualNotes((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const addRest = () => {
+    if (!listening) return;
+    if (reassignIdx !== null) {
+      setManualNotes((prev) => {
+        const copy = [...prev];
+        copy[reassignIdx] = { note: "", octave: null };
+        return copy;
+      });
+      setReassignIdx(null);
+    } else {
+      setManualNotes((prev) => [...prev, { note: "", octave: null }]);
+    }
+  };
+
+  const handlePianoKey = useCallback(
+    ({ note, octave, midi }) => {
+      if (!listening) return;
+      emit("previewNote", { trackId: id, midi });
+      if (reassignIdx !== null) {
+        setManualNotes((prev) => {
+          const copy = [...prev];
+          copy[reassignIdx] = { note, octave };
+          return copy;
+        });
+        setReassignIdx(null);
+      } else {
+        setManualNotes((prev) => [...prev, { note, octave }]);
+      }
+    },
+    [listening, reassignIdx, emit, id],
+  );
+
+  if (pianoKeyRef) {
+    pianoKeyRef.current = listening ? handlePianoKey : null;
+  }
 
   const updateNote = (rowIdx, colIdx, value) => {
     const newInputs = conf.impromptuInputs.map((row) => [...row]);
@@ -239,17 +328,52 @@ export default function TrackDetail({
   return (
     <div style={wrapper}>
       <div style={headerRow}>
-        <span
-          style={{
-            ...title,
-            background: trackCss(id),
-            padding: "3px 10px",
-            borderRadius: 4,
-            color: "#fff",
-          }}
-        >
-          Track {id}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              ...title,
+              background: trackCss(id),
+              padding: "3px 10px",
+              borderRadius: 4,
+              color: "#fff",
+            }}
+          >
+            Track {id}
+          </span>
+          <button
+            style={{
+              ...setBtn,
+              background: listening
+                ? "var(--toggle-active-bg)"
+                : "var(--btn-bg)",
+            }}
+            onClick={toggleSet}
+          >
+            {listening ? "Back" : "Edit"}
+          </button>
+          {listening && (
+            <>
+              <button
+                style={{ ...confirmBtn, background: "var(--toggle-active-bg)" }}
+                onClick={confirmManual}
+              >
+                Confirm
+              </button>
+              <button style={confirmBtn} onClick={undoManual}>
+                Undo
+              </button>
+              <button style={confirmBtn} onClick={clearManual}>
+                Clear
+              </button>
+              <button
+                style={{ ...confirmBtn, background: "var(--pause-active-bg)" }}
+                onClick={addRest}
+              >
+                Rest
+              </button>
+            </>
+          )}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {!globalKeyMode && (
             <>
@@ -382,27 +506,58 @@ export default function TrackDetail({
       </div>
 
       <div style={sequenceDisplay} translate="no">
-        {flat.map(({ raw, display, octave }, i) => {
-          const active = seqPos != null && i === seqPos;
-          const isRest = !raw;
-          const base = isRest ? noteRest : noteChip;
-          const style = active
-            ? {
-                ...base,
-                background: trackCss(id, 0.7, 0.5),
-                color: "#fff",
-                transition: "background 0.06s, color 0.06s",
-              }
-            : base;
-          return (
-            <span key={i} style={style}>
-              {display}
-              {!isRest && octave != null && (
-                <span style={octLabel}>{octave}</span>
-              )}
-            </span>
-          );
-        })}
+        {listening
+          ? manualNotes.map(({ note, octave }, i) => {
+              const isReassign = reassignIdx === i;
+              const isRest = !note;
+              return (
+                <span
+                  key={i}
+                  style={{
+                    ...(isRest ? noteRest : noteChip),
+                    cursor: "pointer",
+                    outline: isReassign ? `2px solid ${trackCss(id)}` : "none",
+                    animation: isReassign
+                      ? "manualBlink 0.6s infinite"
+                      : "none",
+                  }}
+                  onClick={() => setReassignIdx(i === reassignIdx ? null : i)}
+                >
+                  {isRest ? "—" : displayNote(note)}
+                  {!isRest && octave != null && (
+                    <span style={octLabel}>{octave}</span>
+                  )}
+                </span>
+              );
+            })
+          : flat.map(({ raw, display, octave }, i) => {
+              const active = seqPos != null && i === seqPos;
+              const isRest = !raw;
+              const base = isRest ? noteRest : noteChip;
+              const style = active
+                ? {
+                    ...base,
+                    background: trackCss(id, 0.7, 0.5),
+                    color: "#fff",
+                    transition: "background 0.06s, color 0.06s",
+                  }
+                : base;
+              return (
+                <span key={i} style={style}>
+                  {display}
+                  {!isRest && octave != null && (
+                    <span style={octLabel}>{octave}</span>
+                  )}
+                </span>
+              );
+            })}
+        {listening && (
+          <span style={{ ...noteRest, opacity: 0.4, fontSize: 14 }}>
+            {reassignIdx !== null
+              ? `⟵ step ${reassignIdx + 1}`
+              : "▸ click a key"}
+          </span>
+        )}
       </div>
 
       {SHOW_MANUAL_EDITOR && (
@@ -481,6 +636,8 @@ const headerRow = {
   alignItems: "center",
   justifyContent: "space-between",
   marginBottom: 10,
+  flexWrap: "wrap",
+  gap: 6,
 };
 
 const title = {
@@ -589,6 +746,29 @@ const velToggle = {
   cursor: "pointer",
   fontSize: 10,
   fontWeight: 600,
+};
+
+const setBtn = {
+  padding: "2px 10px",
+  border: "none",
+  borderRadius: 4,
+  color: "var(--btn-color)",
+  cursor: "pointer",
+  fontSize: 10,
+  fontWeight: 600,
+  marginLeft: 8,
+};
+
+const confirmBtn = {
+  padding: "3px 10px",
+  border: "none",
+  borderRadius: 4,
+  background: "var(--btn-bg)",
+  color: "var(--btn-color)",
+  cursor: "pointer",
+  fontSize: 11,
+  fontWeight: 600,
+  marginLeft: 4,
 };
 
 const randomizeBtn = {

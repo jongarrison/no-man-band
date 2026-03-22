@@ -44,6 +44,10 @@ export default function Piano({
   activeNotes = [],
   octaveStart = 2,
   octaveEnd = 5,
+  listening = false,
+  scaleHighlight = null,
+  highlightColor = null,
+  onKeyClick = null,
 }) {
   const theme = useTheme();
   const { white: WHITE_COLOR, black: BLACK_COLOR } =
@@ -58,6 +62,11 @@ export default function Piano({
   const whiteW = width / whiteKeys.length;
   const blackW = whiteW * 0.6;
   const blackH = height * 0.6;
+
+  const scaleSet = useMemo(
+    () => (scaleHighlight ? new Set(scaleHighlight) : null),
+    [scaleHighlight],
+  );
 
   const activeMap = new Map();
   for (const n of activeNotes) {
@@ -86,6 +95,22 @@ export default function Piano({
     return `rgb(${Math.round(rr / len)},${Math.round(gg / len)},${Math.round(bb / len)})`;
   };
 
+  const isInScale = (key) => listening && scaleSet && scaleSet.has(key.name);
+
+  const scaleFill = (key, isBlack) => {
+    if (!isInScale(key) || !highlightColor) return null;
+    const [r, g, b] = highlightColor;
+    return isBlack
+      ? `rgb(${Math.round(r * 0.4)},${Math.round(g * 0.4)},${Math.round(b * 0.4)})`
+      : `rgb(${r},${g},${b})`;
+  };
+
+  const handleClick = (key) => {
+    if (listening && onKeyClick && isInScale(key)) {
+      onKeyClick({ note: key.name, octave: key.octave, midi: key.midi });
+    }
+  };
+
   const blackXFor = (key) => {
     let whiteIdx = 0;
     for (const k of allKeys) {
@@ -110,8 +135,12 @@ export default function Piano({
           width={whiteW - 1}
           height={height}
           rx={3}
-          fill={colorFor(key.midi) || WHITE_COLOR}
-          style={{ transition: "fill 0.08s" }}
+          fill={colorFor(key.midi) || scaleFill(key, false) || WHITE_COLOR}
+          style={{
+            transition: "fill 0.08s",
+            cursor: isInScale(key) ? "pointer" : "default",
+          }}
+          onClick={() => handleClick(key)}
         />
       ))}
       {blackKeys.map((key) => (
@@ -122,8 +151,12 @@ export default function Piano({
           width={blackW}
           height={blackH}
           rx={2}
-          fill={colorFor(key.midi) || BLACK_COLOR}
-          style={{ transition: "fill 0.08s" }}
+          fill={colorFor(key.midi) || scaleFill(key, true) || BLACK_COLOR}
+          style={{
+            transition: "fill 0.08s",
+            cursor: isInScale(key) ? "pointer" : "default",
+          }}
+          onClick={() => handleClick(key)}
         />
       ))}
     </svg>
