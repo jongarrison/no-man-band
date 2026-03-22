@@ -1,4 +1,5 @@
 import React from "react";
+import { trackRgb } from "../trackColor.js";
 
 const OCTAVE_START = 2;
 const OCTAVE_END = 5;
@@ -37,24 +38,39 @@ const ALL_KEYS = buildKeys();
 const WHITE_KEYS = ALL_KEYS.filter((k) => !k.isBlack);
 const BLACK_KEYS = ALL_KEYS.filter((k) => k.isBlack);
 
-const ACTIVE_COLOR = "#e94560";
 const WHITE_COLOR = "#f0f0f0";
-const WHITE_ACTIVE = ACTIVE_COLOR;
 const BLACK_COLOR = "#1a1a2e";
-const BLACK_ACTIVE = ACTIVE_COLOR;
 
-export default function Piano({ width, height, activeNote }) {
+export default function Piano({ width, height, activeNotes = [] }) {
   const whiteW = width / WHITE_KEYS.length;
   const blackW = whiteW * 0.6;
   const blackH = height * 0.6;
 
-  const whiteIndexOf = (midi) => {
-    let idx = 0;
-    for (const k of ALL_KEYS) {
-      if (k.midi === midi) return k.isBlack ? -1 : idx;
-      if (!k.isBlack) idx++;
+  const activeMap = new Map();
+  for (const n of activeNotes) {
+    if (!activeMap.has(n.note)) activeMap.set(n.note, []);
+    const ids = activeMap.get(n.note);
+    if (!ids.includes(n.trackId)) ids.push(n.trackId);
+  }
+
+  const colorFor = (midi) => {
+    const ids = activeMap.get(midi);
+    if (!ids) return null;
+    if (ids.length === 1) {
+      const [r, g, b] = trackRgb(ids[0]);
+      return `rgb(${r},${g},${b})`;
     }
-    return -1;
+    let rr = 0,
+      gg = 0,
+      bb = 0;
+    for (const id of ids) {
+      const [r, g, b] = trackRgb(id);
+      rr += r;
+      gg += g;
+      bb += b;
+    }
+    const len = ids.length;
+    return `rgb(${Math.round(rr / len)},${Math.round(gg / len)},${Math.round(bb / len)})`;
   };
 
   const blackXFor = (key) => {
@@ -73,36 +89,30 @@ export default function Piano({ width, height, activeNote }) {
       viewBox={`0 0 ${width} ${height}`}
       style={{ display: "block", flexShrink: 0 }}
     >
-      {WHITE_KEYS.map((key, i) => {
-        const active = activeNote === key.midi;
-        return (
-          <rect
-            key={key.midi}
-            x={i * whiteW}
-            y={0}
-            width={whiteW - 1}
-            height={height}
-            rx={3}
-            fill={active ? WHITE_ACTIVE : WHITE_COLOR}
-            style={{ transition: "fill 0.08s" }}
-          />
-        );
-      })}
-      {BLACK_KEYS.map((key) => {
-        const active = activeNote === key.midi;
-        return (
-          <rect
-            key={key.midi}
-            x={blackXFor(key)}
-            y={0}
-            width={blackW}
-            height={blackH}
-            rx={2}
-            fill={active ? BLACK_ACTIVE : BLACK_COLOR}
-            style={{ transition: "fill 0.08s" }}
-          />
-        );
-      })}
+      {WHITE_KEYS.map((key, i) => (
+        <rect
+          key={key.midi}
+          x={i * whiteW}
+          y={0}
+          width={whiteW - 1}
+          height={height}
+          rx={3}
+          fill={colorFor(key.midi) || WHITE_COLOR}
+          style={{ transition: "fill 0.08s" }}
+        />
+      ))}
+      {BLACK_KEYS.map((key) => (
+        <rect
+          key={key.midi}
+          x={blackXFor(key)}
+          y={0}
+          width={blackW}
+          height={blackH}
+          rx={2}
+          fill={colorFor(key.midi) || BLACK_COLOR}
+          style={{ transition: "fill 0.08s" }}
+        />
+      ))}
     </svg>
   );
 }

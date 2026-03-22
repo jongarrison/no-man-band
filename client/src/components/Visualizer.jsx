@@ -1,26 +1,35 @@
 import React, { useRef, useEffect } from "react";
 import p5 from "p5";
+import { trackRgb } from "../trackColor.js";
 
-export default function Visualizer({ width, height, onNoteRef }) {
+export default function Visualizer({ onNoteRef }) {
   const containerRef = useRef(null);
   const sketchRef = useRef(null);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+
     const ripples = [];
 
     const sketch = (p) => {
       p.setup = () => {
-        p.createCanvas(width, height);
+        p.createCanvas(window.innerWidth, window.innerHeight);
+        p.background(22, 33, 62);
         p.noStroke();
       };
 
+      p.windowResized = () => {
+        p.resizeCanvas(window.innerWidth, window.innerHeight);
+        p.background(22, 33, 62);
+      };
+
       p.draw = () => {
-        p.background(22, 33, 62, 40);
+        p.background(22, 33, 62, 30);
 
         for (let i = ripples.length - 1; i >= 0; i--) {
           const r = ripples[i];
-          r.radius += 2;
-          r.alpha -= 3;
+          r.radius += 1.5;
+          r.alpha -= 2;
           if (r.alpha <= 0) {
             ripples.splice(i, 1);
             continue;
@@ -34,13 +43,21 @@ export default function Visualizer({ width, height, onNoteRef }) {
     sketchRef.current = new p5(sketch, containerRef.current);
 
     onNoteRef.current = (data) => {
-      const hue = (data.note * 15) % 360;
-      const rgb = hslToRgb(hue / 360, 0.7, 0.6);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const noteShift = ((data.note * 5) % 40) - 20;
+      const rgb = trackRgb(data.trackId, 0.7, 0.6);
+      rgb[0] = Math.round(
+        Math.min(255, Math.max(0, rgb[0] + (noteShift / 20) * 30)),
+      );
+      rgb[1] = Math.round(
+        Math.min(255, Math.max(0, rgb[1] + (noteShift / 20) * 15)),
+      );
       ripples.push({
-        x: width / 2 + (Math.random() - 0.5) * width * 0.4,
-        y: height / 2 + (Math.random() - 0.5) * height * 0.3,
-        radius: 5,
-        alpha: 200,
+        x: Math.random() * w,
+        y: Math.random() * h,
+        radius: 8,
+        alpha: 180,
         color: rgb,
       });
     };
@@ -48,30 +65,19 @@ export default function Visualizer({ width, height, onNoteRef }) {
     return () => {
       sketchRef.current?.remove();
     };
-  }, [width, height, onNoteRef]);
+  }, [onNoteRef]);
 
-  return <div ref={containerRef} style={{ flexShrink: 0 }} />;
-}
-
-function hslToRgb(h, s, l) {
-  let r, g, b;
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-}
-
-function hue2rgb(p, q, t) {
-  if (t < 0) t += 1;
-  if (t > 1) t -= 1;
-  if (t < 1 / 6) return p + (q - p) * 6 * t;
-  if (t < 1 / 2) return q;
-  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-  return p;
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        zIndex: 0,
+      }}
+    />
+  );
 }

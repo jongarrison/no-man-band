@@ -2,8 +2,8 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
-const midiHelper = require("../lib/midiHelper");
-const engine = require("./engine");
+const { getPorts } = require("../lib/midiHelper");
+const tm = require("./trackManager");
 
 const app = express();
 const server = http.createServer(app);
@@ -13,44 +13,58 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, "../client/dist")));
 
+if (tm.tracks.length === 0) {
+  tm.addTrack();
+}
+
 io.on("connection", (socket) => {
   console.log("client connected");
 
-  socket.emit("ports", midiHelper.getPorts());
-  socket.emit("conf", engine.getConf());
+  socket.emit("ports", getPorts());
+  socket.emit("state", tm.getState());
 
-  socket.on("connectPort", ({ portIndex }) => {
-    midiHelper.connect(portIndex);
-    socket.emit("ports", midiHelper.getPorts());
+  socket.on("addTrack", () => {
+    tm.addTrack();
   });
 
-  socket.on("connectVirtual", () => {
-    midiHelper.connectVirtualOutput();
+  socket.on("removeTrack", ({ trackId }) => {
+    tm.removeTrack(trackId);
   });
 
-  socket.on("start", () => engine.start());
-  socket.on("stop", () => engine.stop());
+  socket.on("connectPort", ({ trackId, portIndex }) => {
+    tm.connectPort(trackId, portIndex);
+    socket.emit("state", tm.getState());
+  });
+
+  socket.on("disconnectPort", ({ trackId }) => {
+    tm.disconnectPort(trackId);
+    socket.emit("state", tm.getState());
+  });
+
+  socket.on("setTrackConf", ({ trackId, patch }) => {
+    tm.setTrackConf(trackId, patch);
+  });
 
   socket.on("setConf", (patch) => {
-    engine.setConf(patch);
+    if (patch.BPM !== undefined) tm.setBPM(patch.BPM);
   });
 
-  const onNoteOn = (data) => socket.emit("noteOn", data);
-  const onConf = (data) => socket.emit("conf", data);
-  const onStarted = () => socket.emit("started");
-  const onStopped = () => socket.emit("stopped");
+  socket.on("start", () => tm.start());
+  socket.on("stop", () => tm.stop());
 
-  engine.on("noteOn", onNoteOn);
-  engine.on("conf", onConf);
-  engine.on("started", onStarted);
-  engine.on("stopped", onStopped);
+  const onNoteOn = (data) => socket.emit("noteOn", data);
+  const onSeqPos = (data) => socket.emit("seqPos", data);
+  const onState = (data) => socket.emit("state", data);
+
+  tm.on("noteOn", onNoteOn);
+  tm.on("seqPos", onSeqPos);
+  tm.on("state", onState);
 
   socket.on("disconnect", () => {
     console.log("client disconnected");
-    engine.off("noteOn", onNoteOn);
-    engine.off("conf", onConf);
-    engine.off("started", onStarted);
-    engine.off("stopped", onStopped);
+    tm.off("noteOn", onNoteOn);
+    tm.off("seqPos", onSeqPos);
+    tm.off("state", onState);
   });
 });
 
