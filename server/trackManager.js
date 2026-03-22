@@ -159,6 +159,14 @@ function createDefaultConf() {
     synthDecay: 10,
     synthSustain: 80,
     synthRelease: 15,
+    synthDelayOn: false,
+    synthDelayTime: 30,
+    synthDelayFeedback: 25,
+    synthDelayMix: 30,
+    synthReverbOn: false,
+    synthReverbSize: 50,
+    synthReverbTone: 70,
+    synthReverbMix: 25,
   };
 }
 

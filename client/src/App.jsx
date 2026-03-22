@@ -104,6 +104,16 @@ export default function App() {
             t.conf.synthDecay ?? 10,
             t.conf.synthSustain ?? 80,
             t.conf.synthRelease ?? 15,
+            {
+              delayOn: !!t.conf.synthDelayOn,
+              delayTime: t.conf.synthDelayTime ?? 30,
+              delayFb: t.conf.synthDelayFeedback ?? 25,
+              delayMix: t.conf.synthDelayMix ?? 30,
+              reverbOn: !!t.conf.synthReverbOn,
+              reverbSize: t.conf.synthReverbSize ?? 50,
+              reverbTone: t.conf.synthReverbTone ?? 70,
+              reverbMix: t.conf.synthReverbMix ?? 25,
+            },
           );
         }
       }
@@ -403,6 +413,22 @@ export default function App() {
                               selectedTrack.conf.synthDecay ?? 10,
                               selectedTrack.conf.synthSustain ?? 80,
                               selectedTrack.conf.synthRelease ?? 15,
+                              {
+                                delayOn: !!selectedTrack.conf.synthDelayOn,
+                                delayTime:
+                                  selectedTrack.conf.synthDelayTime ?? 30,
+                                delayFb:
+                                  selectedTrack.conf.synthDelayFeedback ?? 25,
+                                delayMix:
+                                  selectedTrack.conf.synthDelayMix ?? 30,
+                                reverbOn: !!selectedTrack.conf.synthReverbOn,
+                                reverbSize:
+                                  selectedTrack.conf.synthReverbSize ?? 50,
+                                reverbTone:
+                                  selectedTrack.conf.synthReverbTone ?? 70,
+                                reverbMix:
+                                  selectedTrack.conf.synthReverbMix ?? 25,
+                              },
                             )
                         : null
                     }

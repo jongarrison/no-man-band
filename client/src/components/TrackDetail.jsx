@@ -485,29 +485,162 @@ export default function TrackDetail({
       </div>
 
       {conf.internalAudio && (
-        <div style={adsrRow}>
-          {[
-            { key: "synthLpf", label: "LPF", def: 100, color: "#e06c75" },
-            { key: "synthRes", label: "Res", def: 0, color: "#e5c07b" },
-            { key: "synthAttack", label: "A", def: 1, color: "#5bcefa" },
-            { key: "synthDecay", label: "D", def: 10, color: "#f5a623" },
-            { key: "synthSustain", label: "S", def: 80, color: "#7ed957" },
-            { key: "synthRelease", label: "R", def: 15, color: "#c084fc" },
-          ].map(({ key, label, def, color }) => (
-            <div key={key} style={adsrKnobWrap}>
-              <Knob
-                value={conf[key] ?? def}
-                onChange={(e) => patch({ [key]: e.value })}
-                size={40}
-                strokeWidth={6}
-                valueColor={color}
-                rangeColor="rgba(255,255,255,0.1)"
-                textColor="rgba(255,255,255,0.65)"
-                valueTemplate={"{value}"}
-              />
-              <span style={adsrLabel}>{label}</span>
+        <div style={synthControlsRow}>
+          <div style={fxGroup}>
+            <span style={fxSectionLabel}>Filter</span>
+            <div style={adsrRow}>
+              {[
+                { key: "synthLpf", label: "LPF", def: 100, color: "#e06c75" },
+                { key: "synthRes", label: "Res", def: 0, color: "#e5c07b" },
+              ].map(({ key, label, def, color }) => (
+                <div key={key} style={adsrKnobWrap}>
+                  <Knob
+                    value={conf[key] ?? def}
+                    onChange={(e) => patch({ [key]: e.value })}
+                    size={40}
+                    strokeWidth={6}
+                    valueColor={color}
+                    rangeColor="rgba(255,255,255,0.1)"
+                    textColor="rgba(255,255,255,0.65)"
+                    valueTemplate={"{value}"}
+                  />
+                  <span style={adsrLabel}>{label}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div style={fxDivider} />
+
+          <div style={fxGroup}>
+            <span style={fxSectionLabel}>Amp Env</span>
+            <div style={adsrRow}>
+              {[
+                { key: "synthAttack", label: "A", def: 1, color: "#5bcefa" },
+                { key: "synthDecay", label: "D", def: 10, color: "#f5a623" },
+                { key: "synthSustain", label: "S", def: 80, color: "#7ed957" },
+                { key: "synthRelease", label: "R", def: 15, color: "#c084fc" },
+              ].map(({ key, label, def, color }) => (
+                <div key={key} style={adsrKnobWrap}>
+                  <Knob
+                    value={conf[key] ?? def}
+                    onChange={(e) => patch({ [key]: e.value })}
+                    size={40}
+                    strokeWidth={6}
+                    valueColor={color}
+                    rangeColor="rgba(255,255,255,0.1)"
+                    textColor="rgba(255,255,255,0.65)"
+                    valueTemplate={"{value}"}
+                  />
+                  <span style={adsrLabel}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={fxDivider} />
+
+          <div style={fxGroup}>
+            <button
+              style={fxToggleBtn(!!conf.synthDelayOn)}
+              onClick={() => patch({ synthDelayOn: !conf.synthDelayOn })}
+              title={conf.synthDelayOn ? "Delay on" : "Delay off"}
+            >
+              <span style={fxDot(!!conf.synthDelayOn)} />
+              Delay
+            </button>
+            <div style={adsrRow}>
+              {[
+                {
+                  key: "synthDelayTime",
+                  label: "Time",
+                  def: 30,
+                  color: "#56b6c2",
+                },
+                {
+                  key: "synthDelayFeedback",
+                  label: "Fdbk",
+                  def: 25,
+                  color: "#56b6c2",
+                },
+                {
+                  key: "synthDelayMix",
+                  label: "Mix",
+                  def: 30,
+                  color: "#56b6c2",
+                },
+              ].map(({ key, label, def, color }) => (
+                <div key={key} style={adsrKnobWrap}>
+                  <Knob
+                    value={conf[key] ?? def}
+                    onChange={(e) => patch({ [key]: e.value })}
+                    size={36}
+                    strokeWidth={5}
+                    valueColor={
+                      conf.synthDelayOn ? color : "rgba(255,255,255,0.15)"
+                    }
+                    rangeColor="rgba(255,255,255,0.1)"
+                    textColor="rgba(255,255,255,0.65)"
+                    valueTemplate={"{value}"}
+                    disabled={!conf.synthDelayOn}
+                  />
+                  <span style={adsrLabel}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={fxDivider} />
+
+          <div style={fxGroup}>
+            <button
+              style={fxToggleBtn(!!conf.synthReverbOn)}
+              onClick={() => patch({ synthReverbOn: !conf.synthReverbOn })}
+              title={conf.synthReverbOn ? "Reverb on" : "Reverb off"}
+            >
+              <span style={fxDot(!!conf.synthReverbOn)} />
+              Reverb
+            </button>
+            <div style={adsrRow}>
+              {[
+                {
+                  key: "synthReverbSize",
+                  label: "Size",
+                  def: 50,
+                  color: "#d19a66",
+                },
+                {
+                  key: "synthReverbTone",
+                  label: "Tone",
+                  def: 70,
+                  color: "#d19a66",
+                },
+                {
+                  key: "synthReverbMix",
+                  label: "Mix",
+                  def: 25,
+                  color: "#d19a66",
+                },
+              ].map(({ key, label, def, color }) => (
+                <div key={key} style={adsrKnobWrap}>
+                  <Knob
+                    value={conf[key] ?? def}
+                    onChange={(e) => patch({ [key]: e.value })}
+                    size={36}
+                    strokeWidth={5}
+                    valueColor={
+                      conf.synthReverbOn ? color : "rgba(255,255,255,0.15)"
+                    }
+                    rangeColor="rgba(255,255,255,0.1)"
+                    textColor="rgba(255,255,255,0.65)"
+                    valueTemplate={"{value}"}
+                    disabled={!conf.synthReverbOn}
+                  />
+                  <span style={adsrLabel}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -802,11 +935,18 @@ const selectStyle = {
   cursor: "pointer",
 };
 
+const synthControlsRow = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 12,
+  padding: "4px 0 8px",
+  flexWrap: "wrap",
+};
+
 const adsrRow = {
   display: "flex",
   alignItems: "center",
-  gap: 16,
-  padding: "4px 0 8px",
+  gap: 10,
 };
 
 const adsrKnobWrap = {
@@ -817,8 +957,56 @@ const adsrKnobWrap = {
 };
 
 const adsrLabel = {
-  fontSize: 10,
+  fontSize: 9,
   color: "rgba(255,255,255,0.6)",
   textAlign: "center",
   letterSpacing: 0.5,
 };
+
+const fxDivider = {
+  width: 1,
+  height: 50,
+  background: "rgba(255,255,255,0.1)",
+  alignSelf: "center",
+  flexShrink: 0,
+};
+
+const fxGroup = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+};
+
+const fxSectionLabel = {
+  fontSize: 9,
+  fontWeight: 600,
+  color: "rgba(255,255,255,0.45)",
+  letterSpacing: 0.5,
+  textTransform: "uppercase",
+};
+
+const fxToggleBtn = (on) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "2px 8px",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 4,
+  background: on ? "rgba(255,255,255,0.08)" : "transparent",
+  color: on ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
+  cursor: "pointer",
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: 0.3,
+  transition: "background 0.15s, color 0.15s",
+});
+
+const fxDot = (on) => ({
+  width: 6,
+  height: 6,
+  borderRadius: "50%",
+  background: on ? "#4ade80" : "rgba(255,255,255,0.2)",
+  boxShadow: on ? "0 0 4px #4ade80" : "none",
+  transition: "background 0.15s, box-shadow 0.15s",
+  flexShrink: 0,
+});
