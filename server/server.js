@@ -283,6 +283,10 @@ io.on("connection", (socket) => {
     if (data?.trackId != null) tm.removeTrack(data.trackId);
   });
 
+  socket.on("duplicateTrack", (data) => {
+    if (data?.trackId != null) tm.duplicateTrack(data.trackId);
+  });
+
   socket.on("connectPort", (data) => {
     if (!data || typeof data.trackId === "undefined") return;
     tm.connectPort(data.trackId, data.portIndex);
@@ -348,6 +352,17 @@ io.on("connection", (socket) => {
       tm.genVelocitySpread = Math.max(
         0,
         Math.min(100, Number(patch.genVelocitySpread)),
+      );
+      tm._emitState();
+    }
+    if (patch.genRelease !== undefined) {
+      tm.genRelease = !!patch.genRelease;
+      tm._emitState();
+    }
+    if (patch.genReleaseBias !== undefined) {
+      tm.genReleaseBias = Math.max(
+        0,
+        Math.min(100, Number(patch.genReleaseBias)),
       );
       tm._emitState();
     }

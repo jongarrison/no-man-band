@@ -83,7 +83,10 @@ export default function GlobalControls({
           ⏸
         </button>
         <button
-          style={{ ...btnBase, background: "var(--stop-bg)" }}
+          style={{
+            ...btnBase,
+            background: playing ? "var(--stop-bg)" : "var(--btn-disabled-bg)",
+          }}
           onClick={() => emit("stop")}
           title="Stop & Reset"
         >

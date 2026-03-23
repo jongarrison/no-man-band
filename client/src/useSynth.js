@@ -194,7 +194,7 @@ function pctToTime(pct) {
   return 0.002 + t * t * 1.998;
 }
 
-const FADE_OUT_TIME = 0.008;
+const FADE_OUT_TIME = 0.015;
 
 export default function useSynth() {
   const activeNotes = useRef(new Map());
@@ -348,13 +348,12 @@ export default function useSynth() {
       const fadeOut = () => {
         const t = ctx.currentTime;
         gain.gain.cancelScheduledValues(t);
-        gain.gain.setValueAtTime(gain.gain.value, t);
-        gain.gain.linearRampToValueAtTime(0, t + FADE_OUT_TIME);
+        gain.gain.setTargetAtTime(0, t, FADE_OUT_TIME / 4);
         try {
-          osc1.stop(t + FADE_OUT_TIME + 0.01);
+          osc1.stop(t + FADE_OUT_TIME + 0.02);
         } catch {}
         try {
-          osc2.stop(t + FADE_OUT_TIME + 0.01);
+          osc2.stop(t + FADE_OUT_TIME + 0.02);
         } catch {}
       };
 

@@ -320,37 +320,54 @@ export default function TrackDetail({
           >
             Track {id}
           </span>
-          <button
-            style={{
-              ...setBtn,
-              background: listening
-                ? "var(--toggle-active-bg)"
-                : "var(--btn-bg)",
-            }}
-            onClick={toggleSet}
+          <div
+            style={modeToggle}
+            onClick={() => patch({ arpMode: !conf.arpMode })}
           >
-            {listening ? "Back" : "Edit"}
-          </button>
-          {listening && (
+            <span style={modeToggleBtn(!conf.arpMode)}>Seq</span>
+            <span style={modeToggleBtn(!!conf.arpMode)}>Arp</span>
+          </div>
+          {!conf.arpMode && (
             <>
               <button
-                style={{ ...confirmBtn, background: "var(--toggle-active-bg)" }}
-                onClick={confirmManual}
+                style={{
+                  ...setBtn,
+                  background: listening
+                    ? "var(--toggle-active-bg)"
+                    : "var(--btn-bg)",
+                }}
+                onClick={toggleSet}
               >
-                Confirm
+                {listening ? "Back" : "Edit"}
               </button>
-              <button style={confirmBtn} onClick={undoManual}>
-                Undo
-              </button>
-              <button style={confirmBtn} onClick={clearManual}>
-                Clear
-              </button>
-              <button
-                style={{ ...confirmBtn, background: "var(--pause-active-bg)" }}
-                onClick={addRest}
-              >
-                Rest
-              </button>
+              {listening && (
+                <>
+                  <button
+                    style={{
+                      ...confirmBtn,
+                      background: "var(--toggle-active-bg)",
+                    }}
+                    onClick={confirmManual}
+                  >
+                    Confirm
+                  </button>
+                  <button style={confirmBtn} onClick={undoManual}>
+                    Undo
+                  </button>
+                  <button style={confirmBtn} onClick={clearManual}>
+                    Clear
+                  </button>
+                  <button
+                    style={{
+                      ...confirmBtn,
+                      background: "var(--pause-active-bg)",
+                    }}
+                    onClick={addRest}
+                  >
+                    Rest
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -399,22 +416,68 @@ export default function TrackDetail({
               onChange={(lo, hi) => patch({ octaveMin: lo, octaveMax: hi })}
             />
           </label>
-          <label style={labelStyle}>
-            Steps
-            <input
-              type="number"
-              min={1}
-              max={64}
-              value={flat.length}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 1 && v <= 64) {
-                  emit("setTrackSteps", { trackId: id, steps: v });
-                }
-              }}
-              style={{ ...selectStyle, width: 50, textAlign: "center" }}
-            />
-          </label>
+          {conf.arpMode ? (
+            <>
+              <label style={labelStyle}>
+                Chord
+                <select
+                  value={conf.arpDegree ?? 0}
+                  onChange={(e) => patch({ arpDegree: Number(e.target.value) })}
+                  style={selectStyle}
+                >
+                  {(track.arpChords || []).map((c) => (
+                    <option key={c.degree} value={c.degree}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={labelStyle}>
+                Notes
+                <select
+                  value={conf.arpVoicing ?? 3}
+                  onChange={(e) =>
+                    patch({ arpVoicing: Number(e.target.value) })
+                  }
+                  style={{ ...selectStyle, width: 42 }}
+                >
+                  <option value={3}>3</option>
+                  <option value={4}>4</option>
+                  <option value={5}>5</option>
+                </select>
+              </label>
+              <label style={labelStyle}>
+                Pattern
+                <select
+                  value={conf.arpPattern ?? "up"}
+                  onChange={(e) => patch({ arpPattern: e.target.value })}
+                  style={selectStyle}
+                >
+                  <option value="up">Up</option>
+                  <option value="down">Down</option>
+                  <option value="updown">Up-Down</option>
+                  <option value="random">Random</option>
+                </select>
+              </label>
+            </>
+          ) : (
+            <label style={labelStyle}>
+              Steps
+              <input
+                type="number"
+                min={1}
+                max={64}
+                value={flat.length}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v >= 1 && v <= 64) {
+                    emit("setTrackSteps", { trackId: id, steps: v });
+                  }
+                }}
+                style={{ ...selectStyle, width: 50, textAlign: "center" }}
+              />
+            </label>
+          )}
           <label style={{ ...labelStyle, gap: 4 }}>
             Vel
             <button
@@ -446,42 +509,50 @@ export default function TrackDetail({
               </>
             )}
           </label>
-          <label style={{ ...labelStyle, gap: 4 }}>
-            Rel {conf.release ?? 80}%
-            <input
-              type="range"
-              min={10}
-              max={100}
-              value={conf.release ?? 80}
-              onChange={(e) => patch({ release: Number(e.target.value) })}
-              style={{ width: 60, cursor: "pointer" }}
-            />
-          </label>
-          <button
-            style={{
-              ...randomizeBtn,
-              background: flashing
-                ? "var(--randomize-flash)"
-                : "var(--randomize-bg)",
-              transition: "background 0.15s",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 0,
-            }}
-            onClick={randomize}
-            title="Randomize track"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              style={{ verticalAlign: "middle" }}
+          <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <div style={adsrKnobWrap}>
+              <Knob
+                value={conf.release ?? 80}
+                onChange={(e) => patch({ release: e.value })}
+                min={10}
+                max={100}
+                size={34}
+                strokeWidth={5}
+                valueColor="#a78bfa"
+                rangeColor="rgba(255,255,255,0.1)"
+                textColor="rgba(255,255,255,0.65)"
+                valueTemplate={"{value}"}
+              />
+              <span style={adsrLabel}>Rel</span>
+            </div>
+          </div>
+          {!conf.arpMode && (
+            <button
+              style={{
+                ...randomizeBtn,
+                background: flashing
+                  ? "var(--randomize-flash)"
+                  : "var(--randomize-bg)",
+                transition: "background 0.15s",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0,
+              }}
+              onClick={randomize}
+              title="Randomize track"
             >
-              <path d="M12 2a10 10 0 0 1 7.07 2.93l1.5-1.5A.75.75 0 0 1 22 4v5a1 1 0 0 1-1 1h-5a.75.75 0 0 1-.53-1.28l1.7-1.7A7.5 7.5 0 0 0 4.5 12H2A10 10 0 0 1 12 2z" />
-              <path d="M12 22a10 10 0 0 1-7.07-2.93l-1.5 1.5A.75.75 0 0 1 2 20v-5a1 1 0 0 1 1-1h5a.75.75 0 0 1 .53 1.28l-1.7 1.7A7.5 7.5 0 0 0 19.5 12H22A10 10 0 0 1 12 22z" />
-            </svg>
-          </button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                style={{ verticalAlign: "middle" }}
+              >
+                <path d="M12 2a10 10 0 0 1 7.07 2.93l1.5-1.5A.75.75 0 0 1 22 4v5a1 1 0 0 1-1 1h-5a.75.75 0 0 1-.53-1.28l1.7-1.7A7.5 7.5 0 0 0 4.5 12H2A10 10 0 0 1 12 2z" />
+                <path d="M12 22a10 10 0 0 1-7.07-2.93l-1.5 1.5A.75.75 0 0 1 2 20v-5a1 1 0 0 1 1-1h5a.75.75 0 0 1 .53 1.28l-1.7 1.7A7.5 7.5 0 0 0 19.5 12H22A10 10 0 0 1 12 22z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -682,60 +753,79 @@ export default function TrackDetail({
         </div>
       )}
 
-      <div style={sequenceDisplay} translate="no">
-        {listening
-          ? manualNotes.map(({ note, octave }, i) => {
-              const isReassign = reassignIdx === i;
-              const isRest = !note;
-              return (
-                <span
-                  key={i}
-                  style={{
-                    ...(isRest ? noteRest : noteChip),
-                    cursor: "pointer",
-                    outline: isReassign ? `2px solid ${trackCss(id)}` : "none",
-                    animation: isReassign
-                      ? "manualBlink 0.6s infinite"
-                      : "none",
-                  }}
-                  onClick={() => setReassignIdx(i === reassignIdx ? null : i)}
-                >
-                  {isRest ? "—" : displayNote(note)}
-                  {!isRest && octave != null && (
-                    <span style={octLabel}>{octave}</span>
-                  )}
-                </span>
-              );
-            })
-          : flat.map(({ raw, display, octave }, i) => {
-              const active = seqPos != null && i === seqPos;
-              const isRest = !raw;
-              const base = isRest ? noteRest : noteChip;
-              const style = active
-                ? {
-                    ...base,
-                    background: trackCss(id, 0.7, 0.5),
-                    color: "#fff",
-                    transition: "background 0.06s, color 0.06s",
-                  }
-                : base;
-              return (
-                <span key={i} style={style}>
-                  {display}
-                  {!isRest && octave != null && (
-                    <span style={octLabel}>{octave}</span>
-                  )}
-                </span>
-              );
-            })}
-        {listening && (
-          <span style={{ ...noteRest, opacity: 0.4, fontSize: 14 }}>
-            {reassignIdx !== null
-              ? `⟵ step ${reassignIdx + 1}`
-              : "▸ click a key"}
+      {conf.arpMode ? (
+        <div style={arpDisplay}>
+          <span style={arpIcon}>♫</span>
+          <span style={arpInfo}>
+            {(track.arpChords || []).find(
+              (c) => c.degree === (conf.arpDegree ?? 0),
+            )?.label || "I"}{" "}
+            · {conf.arpVoicing ?? 3} notes ·{" "}
+            {conf.arpPattern === "updown"
+              ? "Up-Down"
+              : (conf.arpPattern || "up").charAt(0).toUpperCase() +
+                (conf.arpPattern || "up").slice(1)}{" "}
+            · Oct {conf.octaveMin ?? octaveStart}–{conf.octaveMax ?? octaveEnd}
           </span>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div style={sequenceDisplay} translate="no">
+          {listening
+            ? manualNotes.map(({ note, octave }, i) => {
+                const isReassign = reassignIdx === i;
+                const isRest = !note;
+                return (
+                  <span
+                    key={i}
+                    style={{
+                      ...(isRest ? noteRest : noteChip),
+                      cursor: "pointer",
+                      outline: isReassign
+                        ? `2px solid ${trackCss(id)}`
+                        : "none",
+                      animation: isReassign
+                        ? "manualBlink 0.6s infinite"
+                        : "none",
+                    }}
+                    onClick={() => setReassignIdx(i === reassignIdx ? null : i)}
+                  >
+                    {isRest ? "—" : displayNote(note)}
+                    {!isRest && octave != null && (
+                      <span style={octLabel}>{octave}</span>
+                    )}
+                  </span>
+                );
+              })
+            : flat.map(({ raw, display, octave }, i) => {
+                const active = seqPos != null && i === seqPos;
+                const isRest = !raw;
+                const base = isRest ? noteRest : noteChip;
+                const style = active
+                  ? {
+                      ...base,
+                      background: trackCss(id, 0.7, 0.5),
+                      color: "#fff",
+                      transition: "background 0.06s, color 0.06s",
+                    }
+                  : base;
+                return (
+                  <span key={i} style={style}>
+                    {display}
+                    {!isRest && octave != null && (
+                      <span style={octLabel}>{octave}</span>
+                    )}
+                  </span>
+                );
+              })}
+          {listening && (
+            <span style={{ ...noteRest, opacity: 0.4, fontSize: 14 }}>
+              {reassignIdx !== null
+                ? `⟵ step ${reassignIdx + 1}`
+                : "▸ click a key"}
+            </span>
+          )}
+        </div>
+      )}
 
       {SHOW_MANUAL_EDITOR && (
         <>
@@ -884,6 +974,26 @@ const labelStyle = {
   color: "var(--label-color)",
 };
 
+const arpDisplay = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "6px 0",
+  marginBottom: 10,
+  minHeight: 24,
+};
+
+const arpIcon = {
+  fontSize: 16,
+  opacity: 0.5,
+};
+
+const arpInfo = {
+  fontSize: 11,
+  color: "rgba(255,255,255,0.6)",
+  letterSpacing: 0.3,
+};
+
 const sequenceDisplay = {
   display: "flex",
   flexWrap: "wrap",
@@ -924,6 +1034,26 @@ const velToggle = {
   fontSize: 10,
   fontWeight: 600,
 };
+
+const modeToggle = {
+  display: "inline-flex",
+  borderRadius: 4,
+  overflow: "hidden",
+  border: "1px solid rgba(255,255,255,0.15)",
+  flexShrink: 0,
+  cursor: "pointer",
+  marginLeft: 6,
+};
+
+const modeToggleBtn = (active) => ({
+  padding: "2px 8px",
+  fontSize: 9,
+  fontWeight: 600,
+  color: active ? "#fff" : "rgba(255,255,255,0.4)",
+  background: active ? "var(--toggle-active-bg)" : "transparent",
+  transition: "background 0.1s, color 0.1s",
+  letterSpacing: 0.3,
+});
 
 const setBtn = {
   padding: "0 8px",

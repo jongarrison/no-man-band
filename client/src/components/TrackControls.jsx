@@ -46,24 +46,43 @@ export default function TrackControls({
       onClick={onSelect}
     >
       <div style={wrapper}>
-        <span
+        <div
           style={{
-            ...trackLabel,
-            background: conf.active ? color : "#444",
-            color: "#fff",
-            opacity: conf.active ? 1 : 0.5,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 1,
           }}
-          onClick={(e) => {
-            e.stopPropagation();
-            emit("setTrackConf", {
-              trackId: id,
-              patch: { active: !conf.active },
-            });
-          }}
-          title={conf.active ? "Mute track" : "Unmute track"}
         >
-          T{id}
-        </span>
+          <span
+            style={{
+              ...trackLabel,
+              background: conf.active ? color : "#444",
+              color: "#fff",
+              opacity: conf.active ? 1 : 0.5,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              emit("setTrackConf", {
+                trackId: id,
+                patch: { active: !conf.active },
+              });
+            }}
+            title={conf.active ? "Mute track" : "Unmute track"}
+          >
+            T{id}
+          </span>
+          <span
+            style={{
+              fontSize: 8,
+              color: "rgba(255,255,255,0.35)",
+              letterSpacing: 1,
+              textTransform: "uppercase",
+            }}
+          >
+            {conf.arpMode ? "arp" : "seq"}
+          </span>
+        </div>
 
         <div
           style={{ display: "flex", gap: 2, alignItems: "center" }}
@@ -255,6 +274,16 @@ export default function TrackControls({
         <div style={{ flex: 1 }} />
 
         <button
+          style={{ ...btnBase, fontSize: 11, opacity: 0.6 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            emit("duplicateTrack", { trackId: id });
+          }}
+          title="Duplicate track"
+        >
+          ⧉
+        </button>
+        <button
           style={{ ...btnBase, background: "var(--remove-bg)", fontSize: 11 }}
           onClick={(e) => {
             e.stopPropagation();
@@ -265,30 +294,50 @@ export default function TrackControls({
         </button>
       </div>
 
-      {flatSeq.length > 0 && (
-        <div style={stepGridRow}>
-          {flatSeq.map((note, i) => {
-            const isActive = seqPos != null && i === seqPos;
-            const isRest = !note;
-            return (
-              <div
-                key={i}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 1,
-                  background: isActive
-                    ? color
-                    : isRest
-                      ? "rgba(255,255,255,0.04)"
-                      : "rgba(255,255,255,0.15)",
-                  transition: "background 0.08s",
-                }}
-              />
-            );
-          })}
-        </div>
-      )}
+      {conf.arpMode
+        ? track.arpSteps > 0 && (
+            <div style={stepGridRow}>
+              {Array.from({ length: track.arpSteps }, (_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 1,
+                    background:
+                      seqPos != null && i === seqPos
+                        ? color
+                        : "rgba(255,255,255,0.15)",
+                    transition: "background 0.08s",
+                  }}
+                />
+              ))}
+            </div>
+          )
+        : flatSeq.length > 0 && (
+            <div style={stepGridRow}>
+              {flatSeq.map((note, i) => {
+                const isActive = seqPos != null && i === seqPos;
+                const isRest = !note;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 1,
+                      background: isActive
+                        ? color
+                        : isRest
+                          ? "rgba(255,255,255,0.04)"
+                          : "rgba(255,255,255,0.15)",
+                      transition: "background 0.08s",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
     </div>
   );
 }

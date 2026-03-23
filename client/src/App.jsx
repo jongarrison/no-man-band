@@ -18,6 +18,7 @@ import GenerativeVisualizer from "./components/GenerativeVisualizer.jsx";
 import useMetronome from "./useMetronome.js";
 import useSynth from "./useSynth.js";
 import { getScaleNotes } from "./scaleUtils.js";
+import { Knob } from "primereact/knob";
 import { trackRgb } from "./trackColor.js";
 
 const CONTAINER_WIDTH = 1032;
@@ -222,15 +223,13 @@ export default function App() {
       )}
 
       <div style={pageWrapper}>
-        {theme === "retro" ? (
+        {theme === "retro" && (
           <img
             src="/title.png"
             alt="No Man Band"
             style={titleImgStyle}
             draggable={false}
           />
-        ) : (
-          <h1 style={titleTextStyle}>No Man Band</h1>
         )}
         {!state ? (
           <div style={cardStyle}>
@@ -310,42 +309,100 @@ export default function App() {
                   style={{ width: 120, cursor: "pointer" }}
                 />
               </label>
-              <button
+              <div
                 style={{
-                  ...genBackBtn,
-                  background: state.genVelocity
-                    ? "rgba(255,255,255,0.2)"
-                    : "rgba(255,255,255,0.08)",
-                  padding: "5px 10px",
-                  height: 32,
-                  boxSizing: "border-box",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
                 }}
-                onClick={() =>
-                  emit("setConf", { genVelocity: !state.genVelocity })
-                }
-                title={
-                  state.genVelocity ? "Random velocity" : "Fixed velocity 100"
-                }
               >
-                Vel {state.genVelocity ? "ON" : "OFF"}
-              </button>
-              {state.genVelocity && (
-                <label style={genLabel}>
-                  Spread {state.genVelocitySpread ?? 50}%
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={state.genVelocitySpread ?? 50}
-                    onChange={(e) =>
-                      emit("setConf", {
-                        genVelocitySpread: Number(e.target.value),
-                      })
-                    }
-                    style={{ width: 80, cursor: "pointer" }}
-                  />
-                </label>
-              )}
+                <Knob
+                  value={
+                    state.genVelocity ? (state.genVelocitySpread ?? 50) : 0
+                  }
+                  onChange={(e) =>
+                    emit("setConf", {
+                      genVelocity: true,
+                      genVelocitySpread: e.value,
+                    })
+                  }
+                  min={0}
+                  max={100}
+                  size={34}
+                  strokeWidth={5}
+                  valueColor={
+                    state.genVelocity ? "#82aaff" : "rgba(255,255,255,0.15)"
+                  }
+                  rangeColor="rgba(255,255,255,0.1)"
+                  textColor="rgba(255,255,255,0.65)"
+                  valueTemplate="{value}"
+                />
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: state.genVelocity
+                      ? "rgba(255,255,255,0.85)"
+                      : "rgba(255,255,255,0.4)",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                  onClick={() =>
+                    emit("setConf", { genVelocity: !state.genVelocity })
+                  }
+                  title={
+                    state.genVelocity ? "Click to disable" : "Click to enable"
+                  }
+                >
+                  Vel
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <Knob
+                  value={state.genRelease ? (state.genReleaseBias ?? 50) : 0}
+                  onChange={(e) =>
+                    emit("setConf", {
+                      genRelease: true,
+                      genReleaseBias: e.value,
+                    })
+                  }
+                  min={0}
+                  max={100}
+                  size={34}
+                  strokeWidth={5}
+                  valueColor={
+                    state.genRelease ? "#a78bfa" : "rgba(255,255,255,0.15)"
+                  }
+                  rangeColor="rgba(255,255,255,0.1)"
+                  textColor="rgba(255,255,255,0.65)"
+                  valueTemplate="{value}"
+                />
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: state.genRelease
+                      ? "rgba(255,255,255,0.85)"
+                      : "rgba(255,255,255,0.4)",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                  onClick={() =>
+                    emit("setConf", { genRelease: !state.genRelease })
+                  }
+                  title={
+                    state.genRelease ? "Click to disable" : "Click to enable"
+                  }
+                >
+                  Rel
+                </span>
+              </div>
             </div>
           </div>
         ) : (
@@ -464,10 +521,10 @@ const pageWrapper = {
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  justifyContent: "flex-start",
+  justifyContent: "center",
   alignItems: "center",
   minHeight: "100vh",
-  padding: "10px 20px 20px",
+  padding: "20px",
 };
 
 const titleTextStyle = {

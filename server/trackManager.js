@@ -67,6 +67,88 @@ function transposeInputs(inputs, oldKey, oldMode, newKey, newMode) {
   });
 }
 
+function getChordDegreesForScale(mode) {
+  const intervals = SCALES[mode] || SCALES.major;
+  const len = intervals.length;
+  const chords = [];
+  for (let deg = 0; deg < len; deg++) {
+    chords.push({ degree: deg, root: deg });
+  }
+  return chords;
+}
+
+function buildChordMidi(key, mode, degree, voicing, octMin, octMax) {
+  const root = ALL_NOTES.indexOf(key);
+  const intervals = SCALES[mode] || SCALES.major;
+  const len = intervals.length;
+  const chordIntervals = [];
+  for (let i = 0; i < voicing; i++) {
+    const idx = (degree + i * 2) % len;
+    const octWrap = Math.floor((degree + i * 2) / len);
+    chordIntervals.push(intervals[idx] + octWrap * 12);
+  }
+  const lowerBound = octMin * 12 + 24;
+  const upperBound = (octMax + 1) * 12 + 23;
+  const notes = [];
+  for (let oct = octMin; oct <= octMax; oct++) {
+    for (const semi of chordIntervals) {
+      const midi = root + semi + oct * 12 + 24;
+      if (midi >= lowerBound && midi <= upperBound) {
+        notes.push(midi);
+      }
+    }
+  }
+  notes.sort((a, b) => a - b);
+  const unique = [...new Set(notes)];
+  return unique;
+}
+
+function buildArpSequence(chordNotes, pattern) {
+  if (chordNotes.length === 0) return [];
+  switch (pattern) {
+    case "down":
+      return [...chordNotes].reverse();
+    case "updown": {
+      if (chordNotes.length <= 1) return chordNotes;
+      const up = [...chordNotes];
+      const down = [...chordNotes].reverse().slice(1, -1);
+      return up.concat(down);
+    }
+    case "random":
+      return chordNotes;
+    case "up":
+    default:
+      return [...chordNotes];
+  }
+}
+
+function chordLabel(key, mode, degree) {
+  const intervals = SCALES[mode] || SCALES.major;
+  const len = intervals.length;
+  if (degree >= len) return String(degree + 1);
+
+  const root = ALL_NOTES.indexOf(key);
+  const chordRoot = ALL_NOTES[(root + intervals[degree]) % 12];
+  const noteName =
+    chordRoot.length === 2 && chordRoot[1] === "s"
+      ? chordRoot[0] + "#"
+      : chordRoot;
+
+  const third = intervals[(degree + 2) % len] - intervals[degree];
+  const adjustedThird = ((third % 12) + 12) % 12;
+  const isMinor = adjustedThird === 3;
+  const fifth = intervals[(degree + 4) % len] - intervals[degree];
+  const adjustedFifth = ((fifth % 12) + 12) % 12;
+  const isDim = adjustedFifth === 6;
+  const isAug = adjustedFifth === 8;
+
+  let quality = isMinor ? "m" : "";
+  if (isDim) quality = "dim";
+  if (isAug) quality = "aug";
+
+  return noteName + quality;
+}
+
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -169,6 +251,10 @@ function createDefaultConf() {
     synthReverbSize: 50,
     synthReverbTone: 70,
     synthReverbMix: 25,
+    arpMode: false,
+    arpDegree: 0,
+    arpVoicing: 3,
+    arpPattern: "up",
   };
 }
 
@@ -265,6 +351,9 @@ class Track {
   }
 
   _playImpromptu(cycle, bpm, vel) {
+    if (this.conf.arpMode) {
+      return this._playArp(cycle, bpm, vel);
+    }
     let result = [];
     for (const idx of this.conf.impromptuInputsCycle) {
       result = result.concat(this.conf.impromptuInputs[idx]);
@@ -283,6 +372,36 @@ class Track {
       return event || { trackId: this.id, seqPos: pos, rest: true };
     }
     return { trackId: this.id, seqPos: pos, rest: true };
+  }
+
+  _playArp(cycle, bpm, vel) {
+    const chordNotes = buildChordMidi(
+      this.conf.key,
+      this.conf.mode,
+      this.conf.arpDegree ?? 0,
+      this.conf.arpVoicing ?? 3,
+      this.conf.octaveMin,
+      this.conf.octaveMax,
+    );
+    if (chordNotes.length === 0) return null;
+    const pattern = this.conf.arpPattern || "up";
+    const seq = buildArpSequence(chordNotes, pattern);
+    if (seq.length === 0) return null;
+
+    let pos;
+    if (pattern === "random") {
+      pos = Math.floor(Math.random() * seq.length);
+    } else {
+      pos = cycle % seq.length;
+    }
+    this._seqPos = pos;
+    const midi = seq[pos];
+    const event = this.sendNote(midi, bpm, vel);
+    if (event) {
+      event.seqPos = pos;
+      event.arpLen = seq.length;
+    }
+    return event || { trackId: this.id, seqPos: pos, rest: true };
   }
 }
 
@@ -304,6 +423,8 @@ class TrackManager extends EventEmitter {
     this.metronome = false;
     this.genVelocity = false;
     this.genVelocitySpread = 50;
+    this.genRelease = false;
+    this.genReleaseBias = 50;
   }
 
   addTrack() {
@@ -315,6 +436,16 @@ class TrackManager extends EventEmitter {
       track.conf.impromptuInputs = seq.impromptuInputs;
       track.conf.impromptuInputsCycle = seq.impromptuInputsCycle;
     }
+    this.tracks.push(track);
+    this._emitState();
+    return track.id;
+  }
+
+  duplicateTrack(id) {
+    const source = this.getTrack(id);
+    if (!source) return null;
+    const track = new Track(nextId++);
+    track.conf = JSON.parse(JSON.stringify(source.conf));
     this.tracks.push(track);
     this._emitState();
     return track.id;
@@ -615,7 +746,15 @@ class TrackManager extends EventEmitter {
       c.timeDivision = randInt(1, 4);
     }
     if (Math.random() < 0.3) {
-      c.release = randInt(20, 100);
+      if (this.genRelease) {
+        const bias = this.genReleaseBias ?? 50;
+        const center = 20 + Math.round((bias / 100) * 80);
+        const lo = Math.max(10, center - 25);
+        const hi = Math.min(100, center + 25);
+        c.release = randInt(lo, hi);
+      } else {
+        c.release = randInt(20, 100);
+      }
     }
 
     if (Math.random() < 0.3) {
@@ -726,14 +865,42 @@ class TrackManager extends EventEmitter {
       metronome: this.metronome,
       genVelocity: this.genVelocity,
       genVelocitySpread: this.genVelocitySpread,
-      tracks: this.tracks.map((t) => ({
-        id: t.id,
-        conf: { ...t.conf },
-        connected: t.output.isConnected(),
-        connectedPort: t.output.getConnectedPort(),
-        trackPlaying: t._playing,
-        trackPaused: t._paused,
-      })),
+      genRelease: this.genRelease,
+      genReleaseBias: this.genReleaseBias,
+      tracks: this.tracks.map((t) => {
+        const key = t.conf.key || "C";
+        const mode = t.conf.mode || "major";
+        const scaleLen = (SCALES[mode] || SCALES.major).length;
+        const arpChords = [];
+        for (let d = 0; d < scaleLen; d++) {
+          arpChords.push({ degree: d, label: chordLabel(key, mode, d) });
+        }
+        let arpSteps = 0;
+        if (t.conf.arpMode) {
+          const chordNotes = buildChordMidi(
+            t.conf.key,
+            t.conf.mode,
+            t.conf.arpDegree ?? 0,
+            t.conf.arpVoicing ?? 3,
+            t.conf.octaveMin,
+            t.conf.octaveMax,
+          );
+          arpSteps = buildArpSequence(
+            chordNotes,
+            t.conf.arpPattern || "up",
+          ).length;
+        }
+        return {
+          id: t.id,
+          conf: { ...t.conf },
+          connected: t.output.isConnected(),
+          connectedPort: t.output.getConnectedPort(),
+          trackPlaying: t._playing,
+          trackPaused: t._paused,
+          arpChords,
+          arpSteps,
+        };
+      }),
     };
   }
 
