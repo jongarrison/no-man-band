@@ -10,7 +10,7 @@ const tm = require("./trackManager");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "http://localhost:5173" },
+  cors: { origin: process.env.CORS_ORIGIN || "http://localhost:5173" },
 });
 
 app.use(express.static(path.join(__dirname, "../client/dist")));
@@ -289,14 +289,16 @@ io.on("connection", (socket) => {
 
   socket.on("connectPort", (data) => {
     if (!data || typeof data.trackId === "undefined") return;
-    tm.connectPort(data.trackId, data.portIndex);
-    socket.emit("state", tm.getState());
+    const portIdx = Number(data.portIndex);
+    if (!Number.isFinite(portIdx) || portIdx < 0) return;
+    tm.connectPort(data.trackId, portIdx);
+    tm._emitState();
   });
 
   socket.on("disconnectPort", (data) => {
     if (!data || typeof data.trackId === "undefined") return;
     tm.disconnectPort(data.trackId);
-    socket.emit("state", tm.getState());
+    tm._emitState();
   });
 
   socket.on("setTrackConf", (data) => {
@@ -315,10 +317,13 @@ io.on("connection", (socket) => {
 
   socket.on("setTrackSteps", (data) => {
     if (!data || typeof data.trackId === "undefined") return;
-    tm.setTrackSteps(data.trackId, Number(data.steps));
+    const steps = Number(data.steps);
+    if (!Number.isFinite(steps)) return;
+    tm.setTrackSteps(data.trackId, steps);
   });
 
   socket.on("setConf", (patch) => {
+    if (!patch || typeof patch !== "object") return;
     if (patch.BPM !== undefined) tm.setBPM(patch.BPM);
     if (patch.globalKeyMode !== undefined)
       tm.setGlobalKeyMode(patch.globalKeyMode);
@@ -447,3 +452,9 @@ function gracefulShutdown(signal) {
 
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("uncaughtException", (err) => {
+  console.error("uncaughtException:", err);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("unhandledRejection:", err);
+});

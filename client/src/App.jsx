@@ -72,7 +72,7 @@ export default function App() {
       if (!s.playing && !s.paused) {
         setSeqPositions({});
       }
-      if (s.tracks.length > 0) {
+      if (s.tracks?.length > 0) {
         setSelectedTrackId((prev) => {
           if (prev && s.tracks.some((t) => t.id === prev)) return prev;
           return s.tracks[0].id;
@@ -130,19 +130,23 @@ export default function App() {
 
       const timerKey = `${data.note}:${data.trackId}`;
       clearTimeout(activeTimers.current[timerKey]);
+      const highlightMs = Math.max(80, Math.min(data.durationMs || 150, 2000));
       activeTimers.current[timerKey] = setTimeout(() => {
         setActiveNotes((prev) =>
           prev.filter(
             (n) => !(n.note === data.note && n.trackId === data.trackId),
           ),
         );
-      }, 150);
+      }, highlightMs);
     });
     socket.on("seqPos", (data) => {
       setSeqPositions((prev) => ({ ...prev, [data.trackId]: data.seqPos }));
     });
     socket.on("evalResult", (data) => {
-      setEvalResults((prev) => [...prev, data]);
+      setEvalResults((prev) => {
+        const next = [...prev, data];
+        return next.length > 500 ? next.slice(-500) : next;
+      });
     });
     socket.on("tick", (data) => {
       metronomeRef.current.tick(data);
@@ -204,7 +208,7 @@ export default function App() {
 
   return (
     <ThemeProvider value={theme}>
-      {!generativeMode && (
+      {state && !generativeMode && (
         <Visualizer
           onNoteRef={visualizerNoteRef}
           theme={theme}
@@ -525,21 +529,6 @@ const pageWrapper = {
   alignItems: "center",
   minHeight: "100vh",
   padding: "20px",
-};
-
-const titleTextStyle = {
-  fontFamily: "'Outfit', sans-serif",
-  fontSize: 44,
-  fontWeight: 400,
-  letterSpacing: 4,
-  textTransform: "uppercase",
-  color: "#7ab8e0",
-  textShadow: "none",
-  marginBottom: 10,
-  textAlign: "center",
-  userSelect: "none",
-  position: "relative",
-  zIndex: 1,
 };
 
 const titleImgStyle = {

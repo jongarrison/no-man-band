@@ -335,9 +335,12 @@ export default function useSynth() {
         osc2.disconnect();
       };
 
+      const noteToken = {};
       osc1.onended = () => {
         hardDisconnect();
-        activeNotes.current.delete(midi);
+        if (activeNotes.current.get(midi)?.token === noteToken) {
+          activeNotes.current.delete(midi);
+        }
       };
 
       if (activeNotes.current.has(midi)) {
@@ -357,7 +360,7 @@ export default function useSynth() {
         } catch {}
       };
 
-      activeNotes.current.set(midi, { fadeOut });
+      activeNotes.current.set(midi, { fadeOut, token: noteToken });
     },
     [applyFx],
   );

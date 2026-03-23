@@ -38,9 +38,9 @@ export const THEME_TRACK_COLORS = {
 
 export function trackHue(trackId) {
   if (cfg.hues) {
-    return cfg.hues[((trackId || 1) - 1) % cfg.hues.length];
+    return cfg.hues[((trackId ?? 1) - 1) % cfg.hues.length];
   }
-  return ((trackId || 1) * 137) % 360;
+  return ((trackId ?? 1) * 137) % 360;
 }
 
 export function trackRgb(trackId, s, l) {

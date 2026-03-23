@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTheme } from "../ThemeContext.jsx";
 import { trackRgb } from "../trackColor.js";
 
+const EMPTY_NOTES = [];
 const PIANO_COLORS = {
   clean: { white: "#f0f0f0", black: "#1a1a2e" },
   retro: { white: "#e0d0f0", black: "#0a0518" },
@@ -41,7 +42,7 @@ function buildKeys(octStart, octEnd) {
 export default function Piano({
   width,
   height,
-  activeNotes = [],
+  activeNotes = EMPTY_NOTES,
   octaveStart = 2,
   octaveEnd = 5,
   listening = false,

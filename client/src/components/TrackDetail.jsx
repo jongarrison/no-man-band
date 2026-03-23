@@ -7,8 +7,9 @@ import { SYNTH_VOICES, VOICE_DEFAULTS } from "../useSynth.js";
 function DualRangeSlider({ min, max, low, high, onChange, showTicks = true }) {
   const trackRef = useRef(null);
   const [lowOnTop, setLowOnTop] = useState(false);
-  const pctLow = ((low - min) / (max - min)) * 100;
-  const pctHigh = ((high - min) / (max - min)) * 100;
+  const range = max - min || 1;
+  const pctLow = ((low - min) / range) * 100;
+  const pctHigh = ((high - min) / range) * 100;
 
   const handlePointerDown = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();

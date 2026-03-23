@@ -40,6 +40,7 @@ export function displayNote(n) {
 
 export function getScaleNotes(key, mode) {
   const root = ALL_NOTES.indexOf(key);
+  if (root === -1) return getScaleNotes("C", mode);
   const intervals = SCALES[mode] || SCALES.major;
   return intervals.map((i) => ALL_NOTES[(root + i) % 12]);
 }

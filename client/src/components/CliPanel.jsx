@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 export default function CliPanel({ emit, evalResults }) {
   const [input, setInput] = useState("");
   const [history, setHistory] = useState([]);
-  const [histIdx, setHistIdx] = useState(-1);
+  const histIdxRef = useRef(-1);
   const logRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -25,7 +25,7 @@ export default function CliPanel({ emit, evalResults }) {
       const filtered = prev.filter((h) => h !== code);
       return [...filtered, code];
     });
-    setHistIdx(-1);
+    histIdxRef.current = -1;
     setInput("");
   };
 
@@ -37,22 +37,23 @@ export default function CliPanel({ emit, evalResults }) {
       e.preventDefault();
       setHistory((prev) => {
         if (prev.length === 0) return prev;
-        const next =
-          histIdx === -1 ? prev.length - 1 : Math.max(0, histIdx - 1);
-        setHistIdx(next);
+        const idx = histIdxRef.current;
+        const next = idx === -1 ? prev.length - 1 : Math.max(0, idx - 1);
+        histIdxRef.current = next;
         setInput(prev[next]);
         return prev;
       });
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       setHistory((prev) => {
-        if (histIdx === -1) return prev;
-        const next = histIdx + 1;
+        const idx = histIdxRef.current;
+        if (idx === -1) return prev;
+        const next = idx + 1;
         if (next >= prev.length) {
-          setHistIdx(-1);
+          histIdxRef.current = -1;
           setInput("");
         } else {
-          setHistIdx(next);
+          histIdxRef.current = next;
           setInput(prev[next]);
         }
         return prev;

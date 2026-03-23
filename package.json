@@ -2,7 +2,7 @@
   "name": "no-man-band",
   "version": "1.0.0",
   "description": "Generative MIDI music app",
-  "main": "index.js",
+  "main": "server/server.js",
   "scripts": {
     "repl": "node noManBand.js",
     "server": "node server/server.js",

@@ -34,6 +34,7 @@ const SCALES = {
 
 function getScaleNotes(key, mode) {
   const root = ALL_NOTES.indexOf(key);
+  if (root === -1) return getScaleNotes("C", mode);
   const intervals = SCALES[mode] || SCALES.major;
   return intervals.map((i) => ALL_NOTES[(root + i) % 12]);
 }
@@ -65,16 +66,6 @@ function transposeInputs(inputs, oldKey, oldMode, newKey, newMode) {
       return closest < newScale.length ? newScale[closest] : note;
     });
   });
-}
-
-function getChordDegreesForScale(mode) {
-  const intervals = SCALES[mode] || SCALES.major;
-  const len = intervals.length;
-  const chords = [];
-  for (let deg = 0; deg < len; deg++) {
-    chords.push({ degree: deg, root: deg });
-  }
-  return chords;
 }
 
 function buildChordMidi(key, mode, degree, voicing, octMin, octMax) {
@@ -148,6 +139,49 @@ function chordLabel(key, mode, degree) {
 
   return noteName + quality;
 }
+
+const CONF_KEYS = new Set([
+  "playImpromptuOn",
+  "playScaleOn",
+  "playBeatOn",
+  "impromptuInputs",
+  "impromptuInputsCycle",
+  "impromptuOctaves",
+  "impromptuOctave",
+  "octaveMin",
+  "octaveMax",
+  "midiChannel",
+  "active",
+  "timeDivision",
+  "key",
+  "mode",
+  "velocityOn",
+  "velocityMin",
+  "velocityMax",
+  "release",
+  "steps",
+  "internalAudio",
+  "synthVoice",
+  "synthVolume",
+  "synthLpf",
+  "synthRes",
+  "synthAttack",
+  "synthDecay",
+  "synthSustain",
+  "synthRelease",
+  "synthDelayOn",
+  "synthDelayTime",
+  "synthDelayFeedback",
+  "synthDelayMix",
+  "synthReverbOn",
+  "synthReverbSize",
+  "synthReverbTone",
+  "synthReverbMix",
+  "arpMode",
+  "arpDegree",
+  "arpVoicing",
+  "arpPattern",
+]);
 
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -266,6 +300,7 @@ class Track {
     this._cycle = 0;
     this._playing = true;
     this._paused = false;
+    this._noteOffTimers = [];
   }
 
   _getVelocity(genVelocity, genVelocitySpread) {
@@ -289,17 +324,17 @@ class Track {
     if (!this.conf.active) return null;
     const noteOn = 143 + this.conf.midiChannel;
     const noteOff = 127 + this.conf.midiChannel;
-    console.log(
-      `[track-${this.id}] sendNote midi=${noteNumber} ch=${this.conf.midiChannel} vel=${velocity} connected=${this.output.isConnected()} port=${this.output.getConnectedPort()}`,
-    );
     this.output.sendMessage([noteOn, noteNumber, velocity]);
 
     const beatMs = 1000 / (bpm / 60);
     const gate = Math.max(0.1, Math.min(1, (this.conf.release || 80) / 100));
     const durationMs = beatMs * gate;
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       this.output.sendMessage([noteOff, noteNumber, 0]);
+      const idx = this._noteOffTimers.indexOf(timer);
+      if (idx !== -1) this._noteOffTimers.splice(idx, 1);
     }, durationMs);
+    this._noteOffTimers.push(timer);
 
     return { trackId: this.id, note: noteNumber, velocity, durationMs };
   }
@@ -330,6 +365,8 @@ class Track {
   }
 
   destroy() {
+    for (const t of this._noteOffTimers) clearTimeout(t);
+    this._noteOffTimers = [];
     this.allNotesOff();
     this.output.disconnect();
   }
@@ -363,7 +400,7 @@ class Track {
     this._seqPos = pos;
     const noteName = result[pos];
     let noteNumber = noteHelper.notes[noteName];
-    if (noteNumber) {
+    if (noteNumber !== undefined) {
       const oct =
         this.conf.impromptuOctaves?.[pos] ?? this.conf.impromptuOctave;
       noteNumber = noteNumber + oct * 12;
@@ -432,11 +469,22 @@ class TrackManager extends EventEmitter {
     if (this.globalKeyMode) {
       track.conf.key = this.globalKey;
       track.conf.mode = this.globalMode;
-      const seq = generateRandomSequence(this.globalKey, this.globalMode);
+      const seq = generateRandomSequence(
+        this.globalKey,
+        this.globalMode,
+        undefined,
+        track.conf.octaveMin,
+        track.conf.octaveMax,
+      );
       track.conf.impromptuInputs = seq.impromptuInputs;
       track.conf.impromptuInputsCycle = seq.impromptuInputsCycle;
+      track.conf.impromptuOctaves = seq.impromptuOctaves;
     }
     this.tracks.push(track);
+    if (this.generativeMode && this._savedConfs) {
+      this._savedConfs.set(track.id, JSON.parse(JSON.stringify(track.conf)));
+      track._genRhythm = this._generateRhythm();
+    }
     this._emitState();
     return track.id;
   }
@@ -465,7 +513,12 @@ class TrackManager extends EventEmitter {
 
   setTrackConf(id, patch) {
     const track = this.getTrack(id);
-    if (!track) return;
+    if (!track || !patch || typeof patch !== "object") return;
+    const filtered = {};
+    for (const k of Object.keys(patch)) {
+      if (CONF_KEYS.has(k)) filtered[k] = patch[k];
+    }
+    patch = filtered;
     const keyChanging = patch.key !== undefined && patch.key !== track.conf.key;
     const modeChanging =
       patch.mode !== undefined && patch.mode !== track.conf.mode;
@@ -682,7 +735,7 @@ class TrackManager extends EventEmitter {
   }
 
   setBPM(bpm) {
-    bpm = Math.max(10, Math.min(300, Number(bpm) || 120));
+    bpm = Math.max(10, Math.min(300, Number(bpm) || this.BPM));
     this.BPM = bpm;
     if (this._interval) {
       clearInterval(this._interval);
@@ -693,6 +746,8 @@ class TrackManager extends EventEmitter {
   }
 
   setPianoRange(start, end) {
+    start = Math.max(0, Math.min(8, Number(start) || 2));
+    end = Math.max(start, Math.min(8, Number(end) || 5));
     this.pianoOctStart = start;
     this.pianoOctEnd = end;
   }
@@ -724,6 +779,7 @@ class TrackManager extends EventEmitter {
       pattern.push(Math.random() < density ? 1 : 0);
     }
     if (pattern.every((v) => v === 0)) pattern[0] = 1;
+    pattern._density = pattern.filter((v) => v === 1).length / pattern.length;
     return pattern;
   }
 
@@ -921,8 +977,7 @@ class TrackManager extends EventEmitter {
         const pattern = track._genRhythm;
         const patIdx = st % pattern.length;
         shouldPlay = pattern[patIdx] === 1;
-        const density = pattern.filter((v) => v === 1).length / pattern.length;
-        effectiveBPM = this.BPM * density;
+        effectiveBPM = this.BPM;
       } else {
         const div = track.conf.timeDivision || 4;
         const stepsPerPlay = 12 / div;

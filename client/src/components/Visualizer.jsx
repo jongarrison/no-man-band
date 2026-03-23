@@ -17,10 +17,18 @@ export default function Visualizer({
   const containerRef = useRef(null);
   const sketchRef = useRef(null);
   const themeRef = useRef(theme);
+  const octaveStartRef = useRef(octaveStart);
+  const octaveEndRef = useRef(octaveEnd);
+  const pianoWidthRef = useRef(pianoWidth);
 
   useEffect(() => {
     themeRef.current = theme;
   }, [theme]);
+  useEffect(() => {
+    octaveStartRef.current = octaveStart;
+    octaveEndRef.current = octaveEnd;
+    pianoWidthRef.current = pianoWidth;
+  }, [octaveStart, octaveEnd, pianoWidth]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -182,10 +190,10 @@ export default function Visualizer({
 
     const BLACK_SET = new Set([1, 3, 6, 8, 10]);
     function noteToX(note) {
-      const pw = pianoWidth;
+      const pw = pianoWidthRef.current;
       const cardLeft = (window.innerWidth - pw) / 2;
-      const midiMin = 24 + octaveStart * 12;
-      const midiMax = 24 + (octaveEnd + 1) * 12 - 1;
+      const midiMin = 24 + octaveStartRef.current * 12;
+      const midiMax = 24 + (octaveEndRef.current + 1) * 12 - 1;
       let totalWhite = 0;
       for (let m = midiMin; m <= midiMax; m++) {
         if (!BLACK_SET.has((m - 24) % 12)) totalWhite++;
